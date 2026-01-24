@@ -20,7 +20,7 @@ Submit an issue and immediately see it publicly listed so
 others can confirm/endorse it.​
 
 
-Must Haves MVP:
+## Must Haves MVP:
 1. Report an issue (form): 
 Title, description, location, and an optional photo upload.
 2. Public issue feed: 
