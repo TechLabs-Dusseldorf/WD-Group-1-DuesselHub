@@ -18,3 +18,12 @@ addressed.​
 
 Submit an issue and immediately see it publicly listed so
 others can confirm/endorse it.​
+
+
+Must Haves MVP:
+1. Report an issue (form): 
+Title, description, location, and an optional photo upload.
+2. Public issue feed: 
+List of all active reports in a basic detail view.
+3. Endorsement (upvote): 
+Users can “endorse” a report; endorsement count visible to everyone.
