@@ -22,7 +22,7 @@ app.use('/api', router)
 app.get('/', (req, res) => {
     res.status(200).json({ message: 'API is running successfully 🚀' })
 })
-const PORT = 5000
+const PORT = process.env.PORT || 5001
 
 const connectDB = async () => {
     try {
