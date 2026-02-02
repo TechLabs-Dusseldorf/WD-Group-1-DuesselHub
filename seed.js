@@ -5,7 +5,7 @@ import Issue from "./src/model/Issue.js";
 
 dotenv.config();
 
-// DB-Verbindung
+// DB-Connection
 async function connectDB() {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
@@ -24,7 +24,7 @@ const fakeIssues = [
   { title: "Broken bench", description: "Bench in the park is broken and unsafe", location: "Central Park" }
 ];
 
-// Daten in DB einfügen
+// Put data into DB
 async function seedDatabase() {
   try {
     await Issue.insertMany(fakeIssues);
@@ -37,7 +37,7 @@ async function seedDatabase() {
   }
 }
 
-// Seed Script ausführen
+// Seed Script
 async function runSeed() {
   await connectDB();
   await seedDatabase();
