@@ -1,14 +1,9 @@
-import './App.css'
+import './styles/App.css'
 import React from 'react'
+import { FeedPage } from './pages/FeedPage.jsx'
 
 function App() {
-
-    return (
-        <>
-            <h1> Hello World</h1>
-
-        </>
-    )
+  return <FeedPage />
 }
 
 export default App
