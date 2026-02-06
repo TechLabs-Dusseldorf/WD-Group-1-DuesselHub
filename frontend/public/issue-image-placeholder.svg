@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320" role="img" aria-label="No image available">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F5F7FA"/>
+      <stop offset="100%" stop-color="#E9EEF5"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="480" height="320" rx="18" fill="url(#bg)"/>
+  <rect x="16" y="16" width="448" height="288" rx="14" fill="none" stroke="#B8C4D6" stroke-width="3" stroke-dasharray="8 8"/>
+
+  <g fill="none" stroke="#6B7A90" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,4)">
+    <rect x="170" y="116" width="140" height="92" rx="14"/>
+    <circle cx="240" cy="162" r="22"/>
+    <path d="M205 116l12-18h46l12 18"/>
+  </g>
+
+  <text x="240" y="250" text-anchor="middle" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
+        font-size="18" fill="#4F5D73">No photo provided</text>
+  <text x="240" y="276" text-anchor="middle" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
+        font-size="14" fill="#7A889E">This issue has no image yet</text>
+</svg>
