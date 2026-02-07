@@ -9,9 +9,9 @@ dotenv.config();
 async function connectDB() {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log("✅ Database connected (seed)");
+    console.log("Database connected (seed)");
   } catch (error) {
-    console.error("❌ Database connection failed:", error);
+    console.error("Database connection failed:", error);
   }
 }
 
@@ -28,12 +28,12 @@ const fakeIssues = [
 async function seedDatabase() {
   try {
     await Issue.insertMany(fakeIssues);
-    console.log("🌱 Issues inserted into database");
+    console.log("Issues inserted into database");
   } catch (error) {
-    console.error("❌ Seeding failed:", error);
+    console.error("Seeding failed:", error);
   } finally {
     await mongoose.connection.close();
-    console.log("🔌 Database connection closed");
+    console.log("Database connection closed");
   }
 }
 
