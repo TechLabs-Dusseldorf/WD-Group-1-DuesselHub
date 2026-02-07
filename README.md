@@ -27,3 +27,7 @@ Title, description, location, and an optional photo upload.
 List of all active reports in a basic detail view.
 3. Endorsement (upvote): 
 Users can “endorse” a report; endorsement count visible to everyone.
+
+
+
+# THIS IS A TEST
