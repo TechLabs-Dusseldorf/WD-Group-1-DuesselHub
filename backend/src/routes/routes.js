@@ -1,66 +1,17 @@
-import dotenv from "dotenv"
-import express from "express"
-import Issue from "../models/Issue.js"
+import dotenv from "dotenv";
+import express from "express";
+import upload from "../middleware/upload.js";
+import { createIssue, getAllIssues } from "../controllers/issueController.js";
 
-dotenv.config()
+dotenv.config();
 
-const router = express.Router()
-
-router.post('/issues', async (req, res) => {
-  try {
-    const {
-      title,
-      name,
-      description,
-      location,
-      photoUrl
-    } = req.body
-    if (!title) {
-        return res.status(400).json({ message: "Please enter a title." })
-    }
-    /*check for the conditions of name, description, location, and photo format and size*/
-    if(!name) {
-        return res.status(400).json({ message: "Please enter your name."})
-    }
-    if(!description) {
-        return res.status(400).json({ message: "Please write your report."})
-    }
-    if(!location) {
-        return res.status(400).json({ message: "Please write where the issue is located."})
-    }
-
-    const issue = new Issue({
-      title,
-      name,
-      description,
-      location,
-      photoUrl
-    })
-
-    const savedIssue = await issue.save()
-
-    res.status(201).json(savedIssue)
-  } catch (error) {
-    /*handle this in controller?*/
-    res.status(500).json({ message: "The report cannot be submitted. Please try again." })
-  }
-})
-
-
+const router = express.Router();
 
 router.get('/test', (req, res) => {
-    res.status(200).json({ message: 'Router is working!' })
-})
+  res.status(200).json({ message: 'Router is working!' });
+});
 
-router.get('/issues', async (req, res) => {
-    try {
-        const issues = await Issue.find({})
-        
-        res.status(200).json(issues)
-    } /*handle this in controller*/
-    catch (error) {
-        res.status(500).json({ message: error.message })
-    }
-})
+router.post('/issues', upload.single('photo'), createIssue);
+router.get('/issues', getAllIssues);
 
-export default router
+export default router;
