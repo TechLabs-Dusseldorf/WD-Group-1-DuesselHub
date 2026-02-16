@@ -4,7 +4,7 @@ export function TopBar({ onReportIssue }) {
     return (
         <header className="topbar">
             <div className="container topbar__inner">
-                <a className="brand" href="/" aria-label="Zur Startseite">
+                <a className="brand" href="/" aria-label="Go to home page">
                     <img className="brand__logoImg" src={logoUrl} alt="DüsselHub" width={140} height={36} />
                 </a>
 
