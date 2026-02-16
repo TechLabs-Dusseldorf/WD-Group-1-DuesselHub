@@ -1,6 +1,6 @@
 const ITEMS = [
     { key: 'newest', label: 'Newest' },
-    { key: 'endorsed', label: 'Most endorsed' },
+    { key: 'most-endorsed', label: 'Most endorsed' },
     { key: 'hottest', label: 'Hottest' },
 ]
 
