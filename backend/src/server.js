@@ -19,6 +19,7 @@ app.use(cors({
 
 app.use('/api', router)
 
+
 app.get('/', (req, res) => {
     res.status(200).json({ message: 'API is running successfully 🚀' })
 })
@@ -36,9 +37,13 @@ const connectDB = async () => {
     }
 };
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error(err.stack)
+    res.status(500).json({ message: err.message })
+})
+
 // Connect to DB, then start the server
 connectDB().then(() => {
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 });
-
-
