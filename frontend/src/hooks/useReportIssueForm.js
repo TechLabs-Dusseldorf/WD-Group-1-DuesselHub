@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { createIssue, uploadIssuePicture } from '../api/issues.js'
+import { createIssue } from '../api/issues.js'
+import { toast } from 'react-toastify'
 
 export function useReportIssueForm({ onSubmitted, onClose } = {}) {
   const [title, setTitle] = useState('')
@@ -10,7 +11,7 @@ export function useReportIssueForm({ onSubmitted, onClose } = {}) {
   const [isDragOver, setIsDragOver] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
-  const [toast, setToast] = useState(null)
+  const [inlineToast, setInlineToast] = useState(null)
   const [touched, setTouched] = useState({
     title: false,
     location: false,
@@ -50,7 +51,7 @@ export function useReportIssueForm({ onSubmitted, onClose } = {}) {
     setIsDragOver(false)
     setError(null)
     setTouched({ title: false, location: false, description: false, name: false })
-    setToast(null)
+    setInlineToast(null)
   }
 
   function pickFile(f) {
@@ -58,6 +59,11 @@ export function useReportIssueForm({ onSubmitted, onClose } = {}) {
   }
   function removeFile() {
     setFile(null)
+  }
+
+  function extractHttpStatus(value) {
+    const m = String(value ?? '').match(/HTTP\s+(\d{3})/)
+    return m ? Number(m[1]) : undefined
   }
 
   async function handleSubmit(e) {
@@ -69,28 +75,62 @@ export function useReportIssueForm({ onSubmitted, onClose } = {}) {
         .filter(([k, v]) => !!getFieldError(k, v))
         .map(([k]) => labels[k])
       const msg = invalid.length ? `Please complete: ${invalid.join(', ')}.` : 'Please complete all required fields correctly.'
-      setToast(msg)
+      setInlineToast(msg)
       window.clearTimeout(handleSubmit._tId)
-      handleSubmit._tId = window.setTimeout(() => setToast(null), 2400)
+      handleSubmit._tId = window.setTimeout(() => setInlineToast(null), 2400)
       return
     }
     setSubmitting(true)
     setError(null)
     try {
-      let uploadedUrl = undefined
-      if (file) {
-        uploadedUrl = await uploadIssuePicture(file)
-        if (!uploadedUrl) throw new Error('Upload failed')
-      }
-      const payload = { title, location, description, name, photoUrl: uploadedUrl }
-      await createIssue(payload)
+      const formData = new FormData()
+      formData.append('title', title)
+      formData.append('location', location)
+      formData.append('description', description)
+      formData.append('name', name)
+      if (file) formData.append('photo', file)
+
+      await createIssue(formData)
+      toast.success('Issue submitted successfully.')
       reset()
       onSubmitted?.()
       onClose?.()
     } catch (err) {
+      const status = err?.status ?? extractHttpStatus(err?.message)
       const msg = String(err?.message ?? '')
-      if (msg.includes('HTTP 400')) {
-        setError('Validation failed. Please check Title (max 40), Description (40–250), Name (min 2), and required fields.')
+      const normalizedMsg = msg.trim()
+      const lower = normalizedMsg.toLowerCase()
+      const isNetworkError = normalizedMsg === 'Failed to fetch' || lower.includes('network')
+      const isPayloadTooLarge =
+        status === 413 ||
+        lower.includes('size limit') ||
+        lower.includes('megabytes') ||
+        lower.includes('5 megabytes')
+
+      if (isNetworkError) {
+        setError('Network error. Could not reach the server. Check your connection and try again.')
+      } else if (status === 400) {
+        setError(
+          normalizedMsg ||
+          '400 Bad Request — validation failed. Please check Title (max 40), Description (40–250), Name (min 2), and required fields.',
+        )
+      } else if (isPayloadTooLarge) {
+        setError(
+          normalizedMsg ||
+          '413 Payload Too Large — the uploaded file is too big. Please pick an image under 5 MB.',
+        )
+      } else if (status === 429) {
+        setError(
+          normalizedMsg ||
+          '429 Too Many Requests — please wait a moment and try again.',
+        )
+      } else if (typeof status === 'number' && status >= 500) {
+        setError(
+          normalizedMsg ||
+          '500 Server error — we couldn’t submit your report right now. Please try again.',
+        )
+      } else if (msg) {
+        setError(normalizedMsg)
       } else {
         setError('Submit failed. Please try again.')
       }
@@ -107,8 +147,8 @@ export function useReportIssueForm({ onSubmitted, onClose } = {}) {
     isValid,
     submitting,
     error,
-    toast,
-    setToast,
+    toast: inlineToast,
+    setToast: setInlineToast,
     file,
     isDragOver,
     setIsDragOver,
