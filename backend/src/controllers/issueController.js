@@ -68,10 +68,41 @@ export const createIssue = async (req, res) => {
 
 export const getAllIssues = async (req, res) => {
   try {
-    const issues = await Issue.find({});
+    const { sort } = req.query;
+
+    let sortLogic = { createdAt: -1 };
+
+    if (sort === "most_endorsed") {
+      sortLogic = { endorsements: -1 };
+    } else if (sort === "hottest") {
+      sortLogic = { endorsements: -1, createdAt: -1 };
+    }
+
+    const issues = await Issue.find({}).sort(sortLogic);
     
     res.status(200).json(issues);
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const endorseIssue = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const updatedIssue = await Issue.findByIdAndUpdate(
+      id,
+      { $inc: { endorsements: 1 } },
+      { new: true }
+    );
+
+    if (!updatedIssue) {
+      return res.status(404).json({ message: "Issue not found." });
+    }
+
+    res.status(200).json(updatedIssue);
+
+  } catch (error) {
+    res.status(500).json({ message: "Could not endorse issue. Please try again." });
   }
 };
