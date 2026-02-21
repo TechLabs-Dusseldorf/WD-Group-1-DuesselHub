@@ -5,7 +5,32 @@ export async function getIssues({ sortKey, signal } = {}) {
   return Array.isArray(data) ? data : []
 }
 
+async function parseJson(response) {
+  const text = await response.text()
+  if (!text) return null
+  try {
+    return JSON.parse(text)
+  } catch {
+    return null
+  }
+}
+
 export async function createIssue(payload, { signal } = {}) {
+  if (payload instanceof FormData) {
+    const res = await fetch(`${API_BASE_URL}/api/issues`, {
+      method: 'POST',
+      body: payload,
+      signal,
+    })
+    if (!res.ok) {
+      const data = await parseJson(res)
+      const message = data?.message ? String(data.message) : `HTTP ${res.status}`
+      const err = new Error(message)
+      err.status = res.status
+      throw err
+    }
+    return await parseJson(res)
+  }
   return await httpPost('/api/issues', payload, { signal })
 }
 
@@ -14,28 +39,4 @@ export async function endorseIssue(issueId, { signal } = {}) {
   return await httpPost(`/api/issues/${encodeURIComponent(issueId)}/endorse`, null, {
     signal,
   })
-}
-
-export async function uploadIssuePicture(file, { signal } = {}) {
-  if (!(file instanceof File)) {
-    throw new Error('file must be a File')
-  }
-  const formData = new FormData()
-  formData.append('picture', file)
-
-  const res = await fetch(`${API_BASE_URL}/api/issues/picture`, {
-    method: 'POST',
-    body: formData,
-    signal,
-  })
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`)
-  }
-  let data = null
-  try {
-    data = await res.json()
-  } catch {
-    data = null
-  }
-  return data?.url ?? data?.photoUrl ?? data?.path ?? null
 }
