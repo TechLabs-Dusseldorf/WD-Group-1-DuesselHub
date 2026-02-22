@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getIssues } from '../api/issues.js'
+import { endorseIssue, getIssues } from '../api/issues.js'
 import { getMockIssues } from '../api/mock.js'
 import { getIssueKey, toIssueKey } from '../utils/issues.js'
 
@@ -8,6 +8,7 @@ export function useIssues(sortKey) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [sortError, setSortError] = useState(null)
+  const [voteError, setVoteError] = useState(null)
   const [reloadToken, setReloadToken] = useState(0)
 
   useEffect(() => {
@@ -83,26 +84,73 @@ export function useIssues(sortKey) {
     setReloadToken((n) => n + 1)
   }
 
-  function handleVote(issueKey, direction) {
-    setIssues((prev) =>
-      prev.map((issue) => {
-        if (issue.issueKey !== issueKey) return issue
-
-        const current = issue.myVote ?? 0
-        if (direction !== +1) return issue
-
-        const isRemoving = current === +1
-        const nextVote = isRemoving ? 0 : +1
-        const delta = isRemoving ? -1 : +1
-
-        return {
-          ...issue,
-          myVote: nextVote,
-          endorsements: Math.max(0, (issue.endorsements ?? 0) + delta),
-        }
-      }),
-    )
+  function clearVoteError() {
+    setVoteError(null)
   }
 
-  return { issues, loading, error, sortError, reload, handleVote }
+  async function handleVote(issueKey, direction) {
+    if (direction !== +1) return
+    setVoteError(null)
+
+    const currentIssue = issues.find((issue) => issue.issueKey === issueKey)
+    if (!currentIssue) return
+    if (!currentIssue._id) {
+      setVoteError('Endorsement could not be sent to the server. Please try again later.')
+      return
+    }
+
+    const currentVote = currentIssue.myVote ?? 0
+    const isRemoving = currentVote === +1
+    const nextVote = isRemoving ? 0 : +1
+    const delta = isRemoving ? -1 : +1
+    const nextEndorsements = Math.max(0, (currentIssue.endorsements ?? 0) + delta)
+
+    setIssues((prev) =>
+      prev.map((issue) =>
+        issue.issueKey !== issueKey
+          ? issue
+          : { ...issue, myVote: nextVote, endorsements: nextEndorsements },
+      ),
+    )
+
+    try {
+      const action = isRemoving ? 'remove' : 'add'
+      const updatedIssue = await endorseIssue(currentIssue._id, action)
+
+      if (!updatedIssue || typeof updatedIssue !== 'object') return
+
+      setIssues((prev) =>
+        prev.map((issue) => {
+          if (issue.issueKey !== issueKey) return issue
+
+          const updatedIssueKey = getIssueKey(updatedIssue)
+          return {
+            ...issue,
+            ...updatedIssue,
+            issueKey: updatedIssueKey,
+            myVote: nextVote,
+            endorsements:
+              typeof updatedIssue.endorsements === 'number'
+                ? updatedIssue.endorsements
+                : issue.endorsements,
+          }
+        }),
+      )
+    } catch {
+      setIssues((prev) =>
+        prev.map((issue) =>
+          issue.issueKey !== issueKey
+            ? issue
+            : {
+              ...issue,
+              myVote: currentVote,
+              endorsements: currentIssue.endorsements ?? 0,
+            },
+        ),
+      )
+      setVoteError('Endorsement failed. Please try again.')
+    }
+  }
+
+  return { issues, loading, error, sortError, voteError, clearVoteError, reload, handleVote }
 }
