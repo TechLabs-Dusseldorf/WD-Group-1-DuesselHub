@@ -89,11 +89,14 @@ export const getAllIssues = async (req, res) => {
 export const endorseIssue = async (req, res) => {
   try {
     const { id } = req.params;
+    const { action } = req.body;
+
+    const incrementValue = action === "remove" ? -1 : 1;
 
     const updatedIssue = await Issue.findByIdAndUpdate(
       id,
-      { $inc: { endorsements: 1 } },
-      { new: true }
+      { $inc: { endorsements: incrementValue } },
+      { new: true, runValidators: true } 
     );
 
     if (!updatedIssue) {
@@ -103,6 +106,9 @@ export const endorseIssue = async (req, res) => {
     res.status(200).json(updatedIssue);
 
   } catch (error) {
-    res.status(500).json({ message: "Could not endorse issue. Please try again." });
+    if (error.name === "ValidationError") {
+      return res.status(400).json({ message: "Endorsements cannot be less than zero." });
+    }
+    res.status(500).json({ message: "Could not update endorsement. Please try again." });
   }
 };
