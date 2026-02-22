@@ -1,7 +1,12 @@
-import { httpGet, httpPost, API_BASE_URL } from './client.js'
+import { httpGet, httpPatch, API_BASE_URL } from './client.js'
 
 export async function getIssues({ sortKey, signal } = {}) {
-  const data = await httpGet('/api/issues', { signal })
+  const apiSortValue = sortKey === 'most-endorsed' ? 'most_endorsed' : sortKey
+  const params = new URLSearchParams()
+  if (apiSortValue) params.set('sort', apiSortValue)
+  const query = params.toString()
+  const path = query ? `/api/issues?${query}` : '/api/issues'
+  const data = await httpGet(path, { signal })
   return Array.isArray(data) ? data : []
 }
 
@@ -34,9 +39,14 @@ export async function createIssue(payload, { signal } = {}) {
   return await httpPost('/api/issues', payload, { signal })
 }
 
-export async function endorseIssue(issueId, { signal } = {}) {
+export async function endorseIssue(issueId, action, { signal } = {}) {
   if (!issueId) throw new Error('issueId is required')
-  return await httpPost(`/api/issues/${encodeURIComponent(issueId)}/endorse`, null, {
-    signal,
-  })
+  if (action !== 'add' && action !== 'remove') {
+    throw new Error('action must be "add" or "remove"')
+  }
+  return await httpPatch(
+    `/api/${encodeURIComponent(issueId)}/endorse`,
+    { action },
+    { signal },
+  )
 }

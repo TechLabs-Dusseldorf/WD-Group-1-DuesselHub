@@ -31,3 +31,16 @@ export async function httpPost(path, body, { signal } = {}) {
   }
   return await parseJson(res)
 }
+
+export async function httpPatch(path, body, { signal } = {}) {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: body != null ? JSON.stringify(body) : undefined,
+    signal,
+  })
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`)
+  }
+  return await parseJson(res)
+}

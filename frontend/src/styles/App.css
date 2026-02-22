@@ -354,8 +354,10 @@ body {
 }
 
 .vote__button--active {
-    border-color: rgba(20, 119, 255, 0.8);
-    background: var(--chip-active);
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #ffffff;
+    box-shadow: 0 0 0 2px rgba(20, 119, 255, 0.2);
 }
 
 .vote__count {
