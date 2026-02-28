@@ -102,3 +102,30 @@ export const endorseIssue = async (req, res) => {
     res.status(500).json({ message: "Could not update endorsement. Please try again." });
   }
 };
+
+export const updateIssueStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = ['Open', 'In Progress', 'Resolved'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: "Invalid status provided." });
+    }
+
+    const updatedIssue = await Issue.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedIssue) {
+      return res.status(404).json({ message: "Issue not found." });
+    }
+
+    res.status(200).json(updatedIssue);
+
+  } catch (error) {
+    res.status(500).json({ message: "Could not update issue status." });
+  }
+};
