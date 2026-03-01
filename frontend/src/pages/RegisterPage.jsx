@@ -60,7 +60,6 @@ export function RegisterPage() {
         JSON.stringify({ username: watchedUsername, email: watchedEmail }),
       )
     } catch {
-      // sessionStorage not available – silently ignore
     }
   }, [watchedUsername, watchedEmail])
 
@@ -197,6 +196,10 @@ export function RegisterPage() {
           Already have an account?{' '}
           <Link to="/login">Login</Link>
         </p>
+      </div>
+
+      <div className="auth-bg-logo" aria-hidden="true">
+        <img src="/duesselhub-logo.svg" alt="" />
       </div>
     </div>
   )

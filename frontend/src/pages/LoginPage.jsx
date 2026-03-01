@@ -29,8 +29,11 @@ export function LoginPage() {
     setSubmitError(null)
 
     try {
+      const identifier = String(values.usernameOrEmail ?? '').trim()
       const data = await loginUser({
-        email: values.usernameOrEmail,
+        email: identifier,
+        username: identifier,
+        usernameOrEmail: identifier,
         password: values.password,
       })
       login(data)
@@ -106,6 +109,10 @@ export function LoginPage() {
           Don&apos;t have an account?{' '}
           <Link to="/register">Register</Link>
         </p>
+      </div>
+
+      <div className="auth-bg-logo" aria-hidden="true">
+        <img src="/duesselhub-logo.svg" alt="" />
       </div>
     </div>
   )
