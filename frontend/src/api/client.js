@@ -1,7 +1,7 @@
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5001'
 
-async function parseJson(response) {
+export async function parseJson(response) {
   const text = await response.text()
   if (!text) return null
   try {

@@ -1,4 +1,4 @@
-import { httpGet, httpPatch, API_BASE_URL } from './client.js'
+import { httpGet, httpPatch, httpPost, API_BASE_URL } from './client.js'
 
 export async function getIssues({ sortKey, signal } = {}) {
   const apiSortValue = sortKey === 'most-endorsed' ? 'most_endorsed' : sortKey
