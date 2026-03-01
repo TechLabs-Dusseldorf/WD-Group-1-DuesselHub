@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { toast } from 'react-toastify'
 import { TopBar } from '../components/TopBar.jsx'
 import { SortChips } from '../components/SortChips.jsx'
 import { LoadingState } from '../components/LoadingState.jsx'
@@ -8,7 +7,6 @@ import { EmptyState } from '../components/EmptyState.jsx'
 import { IssueList } from '../components/IssueList.jsx'
 import { useIssues } from '../hooks/useIssues.js'
 import { ReportIssueModal } from '../components/ReportIssueModal.jsx'
-import { useAuth } from '../context/AuthContext.jsx'
 
 const SORT_STORAGE_KEY = 'feed.sortKey'
 const DEFAULT_SORT_KEY = 'newest'
@@ -22,7 +20,6 @@ export function FeedPage() {
   const { issues, loading, error, sortError, voteError, clearVoteError, reload, handleVote } =
     useIssues(sortKey)
   const [isReportOpen, setIsReportOpen] = useState(false)
-  const { isLoggedIn } = useAuth()
 
   useEffect(() => {
     localStorage.setItem(SORT_STORAGE_KEY, sortKey)
@@ -37,21 +34,10 @@ export function FeedPage() {
   }, [voteError, clearVoteError])
 
   function handleReportIssue() {
-    if (!isLoggedIn) {
-      toast.error('Please log in to report an issue.')
-      return
-    }
     setIsReportOpen(true)
   }
   const handleCloseReport = () => setIsReportOpen(false)
 
-  function handleVoteGated(issueKey, direction) {
-    if (!isLoggedIn) {
-      toast.error('Please log in to endorse issues.')
-      return
-    }
-    handleVote(issueKey, direction)
-  }
 
   return (
     <div className="app">
@@ -92,7 +78,7 @@ export function FeedPage() {
           )}
 
           {!loading && !error && issues.length > 0 && (
-            <IssueList issues={issues} onVote={handleVoteGated} />
+            <IssueList issues={issues} onVote={handleVote} />
           )}
         </section>
       </main>

@@ -1,77 +1,133 @@
-import { useCallback, useRef, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 import { endorseIssue, getIssues } from '../api/issues.js'
 import { getMockIssues } from '../api/mock.js'
-import { getIssueKey } from '../utils/issues.js'
-
-function enrichIssues(data, voteMap) {
-  return data.map((issue) => {
-    const issueKey = getIssueKey(issue)
-    return {
-      ...issue,
-      issueKey,
-      myVote: voteMap.get(issueKey) ?? 0,
-      endorsements: issue.endorsements ?? 0,
-    }
-  })
-}
+import { getIssueKey, toIssueKey } from '../utils/issues.js'
 
 export function useIssues(sortKey) {
-  const queryClient = useQueryClient()
-  const voteMapRef = useRef(new Map())
+  const [issues, setIssues] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [sortError, setSortError] = useState(null)
   const [voteError, setVoteError] = useState(null)
+  const [reloadToken, setReloadToken] = useState(0)
 
-  const queryKey = ['issues', sortKey]
+  useEffect(() => {
+    let isActive = true
+    const controller = new AbortController()
 
-  const { data: issues = [], isLoading: loading, isError, refetch } = useQuery({
-    queryKey,
-    queryFn: async ({ signal }) => {
+    async function load() {
+      setLoading(true)
+      setError(null)
       setSortError(null)
+
       try {
-        const data = await getIssues({ sortKey, signal })
-        return enrichIssues(data, voteMapRef.current)
+        const data = await getIssues({ signal: controller.signal, sortKey })
+        if (!isActive) return
+        setSortError(null)
+        setIssues((prevIssues) => {
+          const voteByKey = new Map(
+            prevIssues.map((i) => [i.issueKey ?? toIssueKey(i), i.myVote ?? 0]),
+          )
+
+          return data.map((issue) => {
+            const issueKey = getIssueKey(issue)
+            return {
+              ...issue,
+              issueKey,
+              myVote: voteByKey.get(issueKey) ?? 0,
+              endorsements: issue.endorsements ?? 0,
+            }
+          })
+        })
       } catch (e) {
-        if (e?.name === 'AbortError') throw e
+        if (!isActive) return
+        if (e?.name === 'AbortError') return
+
         setSortError(`Sorting "${sortKey}" failed. Please try again in a moment.`)
-        const mockData = await getMockIssues()
-        return enrichIssues(mockData, voteMapRef.current)
+
+        try {
+          const data = await getMockIssues()
+          if (!isActive) return
+          setIssues((prevIssues) => {
+            const voteByKey = new Map(
+              prevIssues.map((i) => [i.issueKey ?? toIssueKey(i), i.myVote ?? 0]),
+            )
+
+            return data.map((issue) => {
+              const issueKey = getIssueKey(issue)
+              return {
+                ...issue,
+                issueKey,
+                myVote: voteByKey.get(issueKey) ?? 0,
+                endorsements: issue.endorsements ?? 0,
+              }
+            })
+          })
+        } catch {
+          setIssues([])
+          setError('We couldn’t load issues right now. Please try again in a moment.')
+        }
+      } finally {
+        if (isActive) setLoading(false)
       }
-    },
-    staleTime: 1000 * 30,
-  })
+    }
 
-  const { mutate: vote } = useMutation({
-    mutationFn: ({ issueId, action }) => endorseIssue(issueId, action),
-    onMutate: ({ issueKey, nextVote, nextEndorsements }) => {
-      const snapshot = queryClient.getQueryData(queryKey)
-      const prevVote = voteMapRef.current.get(issueKey) ?? 0
+    load()
 
-      voteMapRef.current.set(issueKey, nextVote)
-      queryClient.setQueryData(queryKey, (prev = []) =>
-        prev.map((issue) =>
-          issue.issueKey !== issueKey
-            ? issue
-            : { ...issue, myVote: nextVote, endorsements: nextEndorsements },
-        ),
-      )
+    return () => {
+      isActive = false
+      controller.abort()
+    }
+  }, [sortKey, reloadToken])
 
-      return { snapshot, prevVote }
-    },
-    onError: (_err, { issueKey }, ctx) => {
-      queryClient.setQueryData(queryKey, ctx.snapshot)
-      voteMapRef.current.set(issueKey, ctx.prevVote)
-      setVoteError('Endorsement failed. Please try again.')
-    },
-    onSuccess: (updatedIssue, { issueKey, nextVote }) => {
+  function reload() {
+    setReloadToken((n) => n + 1)
+  }
+
+  function clearVoteError() {
+    setVoteError(null)
+  }
+
+  async function handleVote(issueKey, direction) {
+    if (direction !== +1) return
+    setVoteError(null)
+
+    const currentIssue = issues.find((issue) => issue.issueKey === issueKey)
+    if (!currentIssue) return
+    if (!currentIssue._id) {
+      setVoteError('Endorsement could not be sent to the server. Please try again later.')
+      return
+    }
+
+    const currentVote = currentIssue.myVote ?? 0
+    const isRemoving = currentVote === +1
+    const nextVote = isRemoving ? 0 : +1
+    const delta = isRemoving ? -1 : +1
+    const nextEndorsements = Math.max(0, (currentIssue.endorsements ?? 0) + delta)
+
+    setIssues((prev) =>
+      prev.map((issue) =>
+        issue.issueKey !== issueKey
+          ? issue
+          : { ...issue, myVote: nextVote, endorsements: nextEndorsements },
+      ),
+    )
+
+    try {
+      const action = isRemoving ? 'remove' : 'add'
+      const updatedIssue = await endorseIssue(currentIssue._id, action)
+
       if (!updatedIssue || typeof updatedIssue !== 'object') return
-      queryClient.setQueryData(queryKey, (prev = []) =>
+
+      setIssues((prev) =>
         prev.map((issue) => {
           if (issue.issueKey !== issueKey) return issue
+
+          const updatedIssueKey = getIssueKey(updatedIssue)
           return {
             ...issue,
             ...updatedIssue,
-            issueKey: getIssueKey(updatedIssue),
+            issueKey: updatedIssueKey,
             myVote: nextVote,
             endorsements:
               typeof updatedIssue.endorsements === 'number'
@@ -80,50 +136,21 @@ export function useIssues(sortKey) {
           }
         }),
       )
-    },
-  })
-
-  const handleVote = useCallback(
-    (issueKey, direction) => {
-      if (direction !== +1) return
-      setVoteError(null)
-
-      const currentIssue = issues.find((issue) => issue.issueKey === issueKey)
-      if (!currentIssue) return
-      if (!currentIssue._id) {
-        setVoteError('Endorsement could not be sent to the server. Please try again later.')
-        return
-      }
-
-      const currentVote = currentIssue.myVote ?? 0
-      const isRemoving = currentVote === +1
-      const nextVote = isRemoving ? 0 : +1
-      const delta = isRemoving ? -1 : +1
-      const nextEndorsements = Math.max(0, (currentIssue.endorsements ?? 0) + delta)
-
-      vote({
-        issueId: currentIssue._id,
-        action: isRemoving ? 'remove' : 'add',
-        issueKey,
-        nextVote,
-        nextEndorsements,
-      })
-    },
-    [issues, vote],
-  )
-
-  function clearVoteError() {
-    setVoteError(null)
+    } catch {
+      setIssues((prev) =>
+        prev.map((issue) =>
+          issue.issueKey !== issueKey
+            ? issue
+            : {
+              ...issue,
+              myVote: currentVote,
+              endorsements: currentIssue.endorsements ?? 0,
+            },
+        ),
+      )
+      setVoteError('Endorsement failed. Please try again.')
+    }
   }
 
-  return {
-    issues,
-    loading,
-    error: isError ? "We couldn't load issues right now. Please try again in a moment." : null,
-    sortError,
-    voteError,
-    clearVoteError,
-    reload: refetch,
-    handleVote,
-  }
+  return { issues, loading, error, sortError, voteError, clearVoteError, reload, handleVote }
 }
