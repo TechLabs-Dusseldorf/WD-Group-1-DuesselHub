@@ -18,7 +18,8 @@ export function ImageDropzone({ file, onPick }) {
       if (previewUrl) {
         try {
           URL.revokeObjectURL(previewUrl)
-        } catch {}
+        } catch {
+        }
       }
     }
   }, [previewUrl])
