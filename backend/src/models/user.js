@@ -5,7 +5,8 @@ const userSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    role: { type: String, enum: ['user', 'admin'], default: 'user' }, // not necessary but maybe for later
+    // new role field – expand enum to include moderator and keep 'user' as default
+    role: { type: String, enum: ['user', 'moderator', 'admin'], default: 'user' },
 }, { timestamps: true }) // timestamps adds createdAt and updatedAt
 
 // Hash password before saving

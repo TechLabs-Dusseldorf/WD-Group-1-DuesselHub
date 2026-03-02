@@ -1,7 +1,8 @@
 // Imports
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import Issue from "./src/model/Issue.js";
+import Issue from "./src/models/Issue.js";
+import User from "./src/models/User.js";
 
 dotenv.config();
 
@@ -24,10 +25,25 @@ const fakeIssues = [
   { title: "Broken bench", description: "Bench in the park is broken and unsafe", location: "Central Park" }
 ];
 
+// sample users with different roles
+const fakeUsers = [
+  { username: 'alice', email: 'alice@example.com', password: 'password123', role: 'user' },
+  { username: 'mod_bob', email: 'bob@example.com', password: 'password123', role: 'moderator' },
+  { username: 'admin_carol', email: 'carol@example.com', password: 'password123', role: 'admin' },
+];
+
 // Put data into DB
 async function seedDatabase() {
   try {
-    await Issue.insertMany(fakeIssues);
+    await User.deleteMany({})
+    await Issue.deleteMany({})
+
+    const users = await User.insertMany(fakeUsers)
+    console.log("Users inserted into database")
+
+    // assign the first user as reporter for all dummy issues
+    const issuesWithUser = fakeIssues.map((iss) => ({ ...iss, user: users[0]._id }))
+    await Issue.insertMany(issuesWithUser)
     console.log("Issues inserted into database");
   } catch (error) {
     console.error("Seeding failed:", error);

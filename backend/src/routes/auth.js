@@ -1,5 +1,5 @@
 import express from 'express'
-import User from '../models/user.js'
+import User from '../models/User.js'
 import jwt from 'jsonwebtoken'
 
 const router = express.Router()
@@ -13,7 +13,7 @@ const generateToken = (id) => {
 // @desc    Register a new user
 router.post('/register', async (req, res) => {
     try {
-        const { username, email, password } = req.body
+        const { username, email, password, role } = req.body  // role optional hinzugefügt
 
         // Basic validation (verhindert viele stille Crashes)
         if (!username || !email || !password) {
@@ -26,8 +26,13 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ message: 'User already exists' })
         }
 
-        // User erstellen
-        const user = await User.create({ username, email, password })
+        // User erstellen, Default role = "user"
+        const user = await User.create({ 
+            username, 
+            email, 
+            password, 
+            role: role || 'user'  // <- Default fallback
+        })
 
         // JWT erstellen
         const token = generateToken(user._id)
@@ -38,17 +43,16 @@ router.post('/register', async (req, res) => {
             user: {
                 id: user._id,
                 username: user.username,
-                email: user.email
+                email: user.email,
+                role: user.role
             }
         })
 
     } catch (error) {
-    console.error('REGISTER ERROR:', error) // Zeigt Fehler im Terminal
-    res.status(500).json({ message: error.message }) // statt generischem Text
-}
-
+        console.error('REGISTER ERROR:', error) // Zeigt Fehler im Terminal
+        res.status(500).json({ message: error.message }) // statt generischem Text
+    }
 })
-
 
 // @route   POST /api/auth/login
 // @desc    Login user and get token
@@ -77,7 +81,8 @@ router.post('/login', async (req, res) => {
             user: {
                 id: user._id,
                 username: user.username,
-                email: user.email
+                email: user.email,
+                role: user.role
             }
         })
 

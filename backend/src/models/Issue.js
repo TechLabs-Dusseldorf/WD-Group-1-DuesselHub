@@ -31,6 +31,15 @@ const issueSchema = new Schema({
     default: 0,
     min: 0
   },
+  status: {
+    type: String,
+    enum: ['open', 'in_progress', 'closed'],
+    default: 'open'
+  },
+  deleted: {
+    type: Boolean,
+    default: false
+  },
   createdAt: {
     type: Date,
     default: Date.now

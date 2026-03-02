@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken'
-import User from '../models/user.js'
+import User from '../models/User.js'
 
 const protect = async (req, res, next) => {
     let token
@@ -29,6 +29,20 @@ const protect = async (req, res, next) => {
         }
     } else if (!token) {
         return res.status(401).json({ message: 'Not authorized, no token' })
+    }
+}
+
+
+// middleware to check if the current user has one of the allowed roles
+export const authorize = (...allowedRoles) => {
+    return (req, res, next) => {
+        if (!req.user) {
+            return res.status(401).json({ message: 'Not authenticated' })
+        }
+        if (!allowedRoles.includes(req.user.role)) {
+            return res.status(403).json({ message: 'Forbidden: insufficient privileges' })
+        }
+        next()
     }
 }
 
