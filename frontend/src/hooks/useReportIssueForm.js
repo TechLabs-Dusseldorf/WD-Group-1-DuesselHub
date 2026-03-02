@@ -1,161 +1,120 @@
-import { useMemo, useState } from 'react'
+import { useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { createIssue } from '../api/issues.js'
 import { toast } from 'react-toastify'
+import { extractHttpStatus } from '../utils/http.js'
 
 export function useReportIssueForm({ onSubmitted, onClose } = {}) {
-  const [title, setTitle] = useState('')
-  const [location, setLocation] = useState('')
-  const [description, setDescription] = useState('')
-  const [name, setName] = useState('')
   const [file, setFile] = useState(null)
-  const [isDragOver, setIsDragOver] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState(null)
+  const [submitError, setSubmitError] = useState(null)
   const [inlineToast, setInlineToast] = useState(null)
-  const [touched, setTouched] = useState({
-    title: false,
-    location: false,
-    description: false,
-    name: false,
+  const toastTimerRef = useRef(null)
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isValid, isSubmitting },
+    reset: resetForm,
+  } = useForm({
+    mode: 'onChange',
+    defaultValues: { title: '', location: '', description: '', name: '' },
   })
-
-  const MIN = { title: 1, location: 1, description: 40, name: 2 }
-  const MAX = { title: 40, description: 250 }
-
-  function getFieldError(field, value) {
-    const v = String(value ?? '').trim()
-    const min = MIN[field] ?? 1
-    const max = MAX[field]
-    if (v.length < min) return min > 1 ? `Please enter at least ${min} characters.` : 'This field is required.'
-    if (typeof max === 'number' && v.length > max) return `Please keep under ${max} characters.`
-    return null
-  }
-
-  const isValid = useMemo(() => {
-    return ['title', 'location', 'description', 'name'].every((f) => !getFieldError(f, { title, location, description, name }[f]))
-  }, [title, location, description, name])
-
-  function touch(field) {
-    setTouched((t) => ({ ...t, [field]: true }))
-  }
-  function getError(field) {
-    return touched[field] ? getFieldError(field, { title, location, description, name }[field]) : null
-  }
-
-  function reset() {
-    setTitle('')
-    setLocation('')
-    setDescription('')
-    setName('')
-    setFile(null)
-    setIsDragOver(false)
-    setError(null)
-    setTouched({ title: false, location: false, description: false, name: false })
-    setInlineToast(null)
-  }
 
   function pickFile(f) {
     if (f && f.type?.startsWith('image/')) setFile(f)
   }
+
   function removeFile() {
     setFile(null)
   }
 
-  function extractHttpStatus(value) {
-    const m = String(value ?? '').match(/HTTP\s+(\d{3})/)
-    return m ? Number(m[1]) : undefined
+  function reset() {
+    resetForm()
+    setFile(null)
+    setSubmitError(null)
+    setInlineToast(null)
+    clearTimeout(toastTimerRef.current)
   }
 
-  async function handleSubmit(e) {
-    e?.preventDefault?.()
-    if (!isValid || submitting) {
-      setTouched({ title: true, location: true, description: true, name: true })
-      const labels = { title: 'Title', location: 'Location', description: 'Description', name: 'Name' }
-      const invalid = Object.entries({ title, location, description, name })
-        .filter(([k, v]) => !!getFieldError(k, v))
-        .map(([k]) => labels[k])
-      const msg = invalid.length ? `Please complete: ${invalid.join(', ')}.` : 'Please complete all required fields correctly.'
-      setInlineToast(msg)
-      window.clearTimeout(handleSubmit._tId)
-      handleSubmit._tId = window.setTimeout(() => setInlineToast(null), 2400)
-      return
-    }
-    setSubmitting(true)
-    setError(null)
-    try {
+  function showInlineToast(msg) {
+    setInlineToast(msg)
+    clearTimeout(toastTimerRef.current)
+    toastTimerRef.current = window.setTimeout(() => setInlineToast(null), 2400)
+  }
+
+  const onSubmit = handleSubmit(
+    async (values) => {
+      setSubmitError(null)
       const formData = new FormData()
-      formData.append('title', title)
-      formData.append('location', location)
-      formData.append('description', description)
-      formData.append('name', name)
+      formData.append('title', values.title)
+      formData.append('location', values.location)
+      formData.append('description', values.description)
+      formData.append('name', values.name)
       if (file) formData.append('photo', file)
 
-      await createIssue(formData)
-      toast.success('Issue submitted successfully.')
-      reset()
-      onSubmitted?.()
-      onClose?.()
-    } catch (err) {
-      const status = err?.status ?? extractHttpStatus(err?.message)
-      const msg = String(err?.message ?? '')
-      const normalizedMsg = msg.trim()
-      const lower = normalizedMsg.toLowerCase()
-      const isNetworkError = normalizedMsg === 'Failed to fetch' || lower.includes('network')
-      const isPayloadTooLarge =
-        status === 413 ||
-        lower.includes('size limit') ||
-        lower.includes('megabytes') ||
-        lower.includes('5 megabytes')
+      try {
+        await createIssue(formData)
+        toast.success('Issue submitted successfully.')
+        reset()
+        onSubmitted?.()
+        onClose?.()
+      } catch (err) {
+        const status = err?.status ?? extractHttpStatus(err?.message)
+        const msg = String(err?.message ?? '').trim()
+        const lower = msg.toLowerCase()
+        const isNetworkError = msg === 'Failed to fetch' || lower.includes('network')
+        const isPayloadTooLarge =
+          status === 413 ||
+          lower.includes('size limit') ||
+          lower.includes('megabytes') ||
+          lower.includes('5 megabytes')
 
-      if (isNetworkError) {
-        setError('Network error. Could not reach the server. Check your connection and try again.')
-      } else if (status === 400) {
-        setError(
-          normalizedMsg ||
-          '400 Bad Request — validation failed. Please check Title (max 40), Description (40–250), Name (min 2), and required fields.',
-        )
-      } else if (isPayloadTooLarge) {
-        setError(
-          normalizedMsg ||
-          '413 Payload Too Large — the uploaded file is too big. Please pick an image under 5 MB.',
-        )
-      } else if (status === 429) {
-        setError(
-          normalizedMsg ||
-          '429 Too Many Requests — please wait a moment and try again.',
-        )
-      } else if (typeof status === 'number' && status >= 500) {
-        setError(
-          normalizedMsg ||
-          '500 Server error — we couldn’t submit your report right now. Please try again.',
-        )
-      } else if (msg) {
-        setError(normalizedMsg)
-      } else {
-        setError('Submit failed. Please try again.')
+        if (isNetworkError) {
+          setSubmitError('Network error. Could not reach the server. Check your connection and try again.')
+        } else if (status === 400) {
+          setSubmitError(
+            msg ||
+            '400 Bad Request — validation failed. Please check Title (max 40), Description (40–250), Name (min 2), and required fields.',
+          )
+        } else if (isPayloadTooLarge) {
+          setSubmitError(
+            msg ||
+            '413 Payload Too Large — the uploaded file is too big. Please pick an image under 5 MB.',
+          )
+        } else if (status === 429) {
+          setSubmitError(msg || '429 Too Many Requests — please wait a moment and try again.')
+        } else if (typeof status === 'number' && status >= 500) {
+          setSubmitError(
+            msg ||
+            "500 Server error — we couldn't submit your report right now. Please try again.",
+          )
+        } else {
+          setSubmitError(msg || 'Submit failed. Please try again.')
+        }
       }
-    } finally {
-      setSubmitting(false)
-    }
-  }
+    },
+    (formErrors) => {
+      const labels = { title: 'Title', location: 'Location', description: 'Description', name: 'Name' }
+      const names = Object.keys(formErrors).map((k) => labels[k]).filter(Boolean)
+      showInlineToast(
+        names.length
+          ? `Please complete: ${names.join(', ')}.`
+          : 'Please complete all required fields correctly.',
+      )
+    },
+  )
 
   return {
-    values: { title, location, description, name },
-    set: { setTitle, setLocation, setDescription, setName },
-    touch,
-    getError,
+    control,
+    errors,
     isValid,
-    submitting,
-    error,
-    toast: inlineToast,
-    setToast: setInlineToast,
+    isSubmitting,
+    submitError,
+    inlineToast,
     file,
-    isDragOver,
-    setIsDragOver,
     pickFile,
     removeFile,
-    handleSubmit,
+    onSubmit,
     reset,
   }
 }
-

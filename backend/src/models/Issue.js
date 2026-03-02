@@ -9,6 +9,7 @@ const issueSchema = new Schema({
   location: { type: String, required: true, trim: true },
   photoUrl: { type: String },
   endorsements: { type: Number, default: 0, min: 0 },
+  status: { type: String, enum: ['Open', 'In Progress', 'Resolved'], default: 'Open'},
   createdAt: { type: Date, default: Date.now }
 });
 

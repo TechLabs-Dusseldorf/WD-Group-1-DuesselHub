@@ -1,7 +1,13 @@
+import { Controller } from 'react-hook-form'
 import { useReportIssueForm } from '../hooks/useReportIssueForm.js'
 import { FormFieldInput } from './FormFieldInput.jsx'
 import { FormFieldTextarea } from './FormFieldTextarea.jsx'
 import { ImageDropzone } from './ImageDropzone.jsx'
+
+function handleClose(form, onClose) {
+  form.reset()
+  onClose?.()
+}
 
 export function ReportIssueModal({ open, onClose, onSubmitted }) {
   const form = useReportIssueForm({ onSubmitted, onClose })
@@ -10,7 +16,7 @@ export function ReportIssueModal({ open, onClose, onSubmitted }) {
 
   return (
     <div className="modal" role="dialog" aria-modal="true" aria-labelledby="report-title">
-      <div className="modal__backdrop" onClick={() => form.reset() || onClose?.()} />
+      <div className="modal__backdrop" onClick={() => handleClose(form, onClose)} />
       <div className="modal__dialog" role="document">
         <div className="modal__header">
           <h2 id="report-title" className="modal__title">Report an Issue</h2>
@@ -19,63 +25,95 @@ export function ReportIssueModal({ open, onClose, onSubmitted }) {
             type="button"
             className="modal__close"
             aria-label="Close dialog"
-            onClick={() => form.reset() || onClose?.()}
+            onClick={() => handleClose(form, onClose)}
           >
             ×
           </button>
         </div>
 
-        <form className="form form--panel" onSubmit={form.handleSubmit}>
+        <form className="form form--panel" onSubmit={form.onSubmit} noValidate>
           <div className="form__grid">
             <div className="form__main">
-              <FormFieldInput
-                label="Title"
-                placeholder="Short title"
-                value={form.values.title}
-                onChange={(e) => form.set.setTitle(e.target.value)}
-                onBlur={() => form.touch('title')}
-                required
-                minLength={1}
-                maxLength={40}
-                error={form.getError('title')}
-                ariaDescribedById="error-title"
+              <Controller
+                name="title"
+                control={form.control}
+                rules={{
+                  required: 'This field is required.',
+                  maxLength: { value: 40, message: 'Please keep under 40 characters.' },
+                }}
+                render={({ field, fieldState }) => (
+                  <FormFieldInput
+                    label="Title"
+                    placeholder="Short title"
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    maxLength={40}
+                    error={fieldState.isTouched ? fieldState.error?.message : null}
+                    ariaDescribedById="error-title"
+                  />
+                )}
               />
 
-              <FormFieldInput
-                label="Location"
-                placeholder="Street + Number"
-                value={form.values.location}
-                onChange={(e) => form.set.setLocation(e.target.value)}
-                onBlur={() => form.touch('location')}
-                required
-                minLength={1}
-                error={form.getError('location')}
-                ariaDescribedById="error-location"
+              <Controller
+                name="location"
+                control={form.control}
+                rules={{ required: 'This field is required.' }}
+                render={({ field, fieldState }) => (
+                  <FormFieldInput
+                    label="Location"
+                    placeholder="Street + Number"
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    error={fieldState.isTouched ? fieldState.error?.message : null}
+                    ariaDescribedById="error-location"
+                  />
+                )}
               />
 
-              <FormFieldTextarea
-                label="Description"
-                placeholder="What’s the issue and why is it a problem?"
-                value={form.values.description}
-                onChange={(e) => form.set.setDescription(e.target.value)}
-                onBlur={() => form.touch('description')}
-                required
-                minLength={40}
-                maxLength={250}
-                error={form.getError('description')}
-                ariaDescribedById="error-description"
+              <Controller
+                name="description"
+                control={form.control}
+                rules={{
+                  required: 'This field is required.',
+                  minLength: { value: 40, message: 'Please enter at least 40 characters.' },
+                  maxLength: { value: 250, message: 'Please keep under 250 characters.' },
+                }}
+                render={({ field, fieldState }) => (
+                  <FormFieldTextarea
+                    label="Description"
+                    placeholder="What's the issue and why is it a problem?"
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    minLength={40}
+                    maxLength={250}
+                    error={fieldState.isTouched ? fieldState.error?.message : null}
+                    ariaDescribedById="error-description"
+                  />
+                )}
               />
 
-              <FormFieldInput
-                label="Your name"
-                placeholder="First + Last Name"
-                value={form.values.name}
-                onChange={(e) => form.set.setName(e.target.value)}
-                onBlur={() => form.touch('name')}
-                required
-                minLength={2}
-                error={form.getError('name')}
-                ariaDescribedById="error-name"
+              <Controller
+                name="name"
+                control={form.control}
+                rules={{
+                  required: 'This field is required.',
+                  minLength: { value: 2, message: 'Please enter at least 2 characters.' },
+                }}
+                render={({ field, fieldState }) => (
+                  <FormFieldInput
+                    label="Your name"
+                    placeholder="First + Last Name"
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    minLength={2}
+                    error={fieldState.isTouched ? fieldState.error?.message : null}
+                    ariaDescribedById="error-name"
+                  />
+                )}
               />
             </div>
 
@@ -84,37 +122,44 @@ export function ReportIssueModal({ open, onClose, onSubmitted }) {
             </div>
           </div>
 
-          {form.error && <p className="form__error" role="alert">{form.error}</p>}
+          {form.submitError && (
+            <p className="form__error" role="alert">
+              {form.submitError}
+            </p>
+          )}
 
           <div className="form__actions">
-            <button type="button" className="btn btn--secondary btn--large btn--left" onClick={() => form.reset() || onClose?.()} disabled={form.submitting}>
+            <button
+              type="button"
+              className="btn btn--secondary btn--large btn--left"
+              onClick={() => handleClose(form, onClose)}
+              disabled={form.isSubmitting}
+            >
               Discard
             </button>
             <button
               type="button"
               className="btn btn--secondary btn--large btn--center"
               style={{ visibility: form.file ? 'visible' : 'hidden' }}
-              onClick={() => {
-                if (!form.file) return
-                form.removeFile()
-              }}
-              disabled={form.submitting}
+              onClick={() => form.removeFile()}
+              disabled={form.isSubmitting}
             >
               Remove image
             </button>
             <button
               type="submit"
               className="btn btn--primary btn--large btn--right"
-              disabled={!form.isValid || form.submitting}
+              disabled={!form.isValid || form.isSubmitting}
             >
-              {form.submitting ? 'Submitting…' : 'Submit'}
+              {form.isSubmitting ? 'Submitting…' : 'Submit'}
             </button>
           </div>
         </form>
       </div>
-      {form.toast && (
+
+      {form.inlineToast && (
         <div className="toast toast--error" role="status" aria-live="polite">
-          {form.toast}
+          {form.inlineToast}
         </div>
       )}
     </div>
