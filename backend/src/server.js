@@ -28,7 +28,7 @@ const connectDB = async () => {
     try {
         // Read the variable from the .env file
         const conn = await mongoose.connect(process.env.MONGO_URI);
-        
+
         console.log(`MongoDB Connected: ${conn.connection.host}`);
     } catch (error) {
         console.error(`Error: ${error.message}`);
@@ -36,9 +36,13 @@ const connectDB = async () => {
     }
 };
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error(err.stack)
+    res.status(500).json({ message: err.message })
+})
+
 // Connect to DB, then start the server
 connectDB().then(() => {
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 });
-
-

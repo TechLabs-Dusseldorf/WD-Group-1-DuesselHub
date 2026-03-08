@@ -17,8 +17,8 @@ export function LoginPage() {
     handleSubmit,
     formState: { errors, isValid, isSubmitting },
   } = useForm({
-    mode: 'onChange',
-    reValidateMode: 'onChange',
+    mode: 'onBlur',
+    reValidateMode: 'onBlur',
     defaultValues: {
       usernameOrEmail: '',
       password: '',
@@ -61,7 +61,13 @@ export function LoginPage() {
               type="text"
               autoComplete="off"
               className={`auth-form__input${errors.usernameOrEmail ? ' is-invalid' : ''}`}
-              {...register('usernameOrEmail', { required: 'Username or email is required.' })}
+              {...register('usernameOrEmail', {
+                required: 'Username or email is required.',
+                minLength: {
+                  value: 3,
+                  message: 'Please enter at least 3 characters.',
+                },
+              })}
             />
             {errors.usernameOrEmail && (
               <p className="auth-form__field-error" role="alert">
@@ -79,7 +85,13 @@ export function LoginPage() {
               type="password"
               autoComplete="off"
               className={`auth-form__input${errors.password ? ' is-invalid' : ''}`}
-              {...register('password', { required: 'Password is required.' })}
+              {...register('password', {
+                required: 'Password is required.',
+                minLength: {
+                  value: 8,
+                  message: 'Password must be at least 8 characters long.',
+                },
+              })}
             />
             {errors.password && (
               <p className="auth-form__field-error" role="alert">
