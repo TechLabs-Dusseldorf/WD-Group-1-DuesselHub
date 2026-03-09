@@ -57,21 +57,33 @@ export const createIssue = async (req, res) => {
 
 export const getAllIssues = async (req, res) => {
   try {
-    const { sort } = req.query;
-    let sortLogic = { createdAt: -1 };
+    const { sort, status, search } = req.query;
 
+    let queryFilter = {};
+
+    if (status) {
+      queryFilter.status = status; 
+    }
+
+    if (search) {
+      queryFilter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { location: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    let sortLogic = { createdAt: -1 };
     if (sort === "most_endorsed") {
       sortLogic = { endorsements: -1 };
     } else if (sort === "hottest") {
       sortLogic = { endorsements: -1, createdAt: -1 };
     }
 
-    const filter = { deleted: { $ne: true } };
-    const issues = await Issue.find(filter)
-      .populate('user', 'username email')
-      .sort(sortLogic);
-      
+    const issues = await Issue.find(queryFilter).sort(sortLogic);
+    
     res.status(200).json(issues);
+    
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
