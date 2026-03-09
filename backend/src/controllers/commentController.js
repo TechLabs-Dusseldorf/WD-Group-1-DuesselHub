@@ -19,7 +19,7 @@ export const createComment = async (req, res) => {
     }
 
     const comment = new Comment({
-      issue: issueId,
+      issueid: issueId,
       ...result.data
     });
 
@@ -45,7 +45,7 @@ export const getCommentsByIssue = async (req, res) => {
     }
 
     
-    const comments = await Comment.find({ issue: issueId })
+    const comments = await Comment.find({ issueid: issueId })
       .sort({ createdAt: -1 });
 
     return res.status(200).json(comments);
