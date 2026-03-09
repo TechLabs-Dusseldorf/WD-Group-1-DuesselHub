@@ -3,6 +3,7 @@ import express from "express"
 import upload from "../middleware/upload.js"
 import authRoutes from "./auth.js"
 import protect, { authorize, optionalProtect } from "../middleware/authMiddleware.js"
+
 import {
   createIssue,
   deleteIssue,
@@ -10,8 +11,13 @@ import {
   getAllIssues,
   softDeleteIssue,
   updateIssue,
-  updateIssueStatus
+  updateIssueStatus,
 } from "../controllers/issueController.js"
+
+import {
+  createComment,
+  getCommentsByIssue,
+} from "../controllers/commentController.js"
 
 dotenv.config()
 
@@ -24,6 +30,9 @@ router.use("/auth", authRoutes)
 router.get("/test", (req, res) => {
   res.status(200).json({ message: "Router is working!" })
 })
+
+router.post("/issues/:issueId/comments", createComment);
+router.get("/issues/:issueId/comments", getCommentsByIssue);
 
 // Issue routes
 router.post("/issues", protect, upload.single("photo"), createIssue)

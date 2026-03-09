@@ -72,11 +72,9 @@ export const createIssue = async (req, res) => {
   }
 };
 
-
 export const getAllIssues = async (req, res) => {
   try {
     const { sort } = req.query;
-
     let sortLogic = { createdAt: -1 };
 
     if (sort === "most_endorsed") {
@@ -169,16 +167,16 @@ export const endorseIssue = async (req, res) => {
     if (error.name === "ValidationError") {
       return res.status(400).json({ message: "Endorsements cannot be less than zero." });
     }
-    res.status(500).json({ message: "Could not update endorsement. Please try again." });
+    res.status(500).json({ message: "Could not update endorsement." });
   }
 };
 
 export const updateIssueStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status } = req.body; 
 
-    const validStatuses = ['Open', 'In Progress', 'Resolved'];
+    const validStatuses = ['open', 'in_progress', 'closed'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ message: "Invalid status provided." });
     }
@@ -189,12 +187,9 @@ export const updateIssueStatus = async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    if (!updatedIssue) {
-      return res.status(404).json({ message: "Issue not found." });
-    }
-
+    if (!updatedIssue) return res.status(404).json({ message: "Issue not found." });
+    
     res.status(200).json(updatedIssue);
-
   } catch (error) {
     res.status(500).json({ message: "Could not update issue status." });
   }
