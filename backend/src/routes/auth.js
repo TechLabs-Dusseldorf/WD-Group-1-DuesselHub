@@ -22,6 +22,22 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ message: 'Please provide all fields' })
         }
 
+        // Validate Username length (Backend validation per review)
+        if (normalizedUsername.length < 4) {
+            return res.status(400).json({ message: 'Username must be at least 4 characters long' })
+        }
+
+        // Validate Email format (Backend validation per review)
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(normalizedEmail)) {
+            return res.status(400).json({ message: 'Please provide a valid email address' })
+        }
+
+        // Validate Password length (Backend validation per review)
+        if (password.length < 6) {
+            return res.status(400).json({ message: 'Password must be at least 6 characters long' })
+        }
+
         // Prüfen, ob User schon existiert
         const userExists = await User.findOne({ $or: [{ email: normalizedEmail }, { username: normalizedUsername }] })
         if (userExists) {
@@ -60,13 +76,15 @@ router.post('/register', async (req, res) => {
 // @desc    Login user and get token
 router.post('/login', async (req, res) => {
     try {
-        const { email, username, usernameOrEmail, password } = req.body
-        const identifier = String(usernameOrEmail ?? email ?? username ?? '').trim()
+        // Only accept ONE identifier from the Frontend
+        const { email, password } = req.body
+        const identifier = String(email ?? '').trim()
 
         if (!identifier || !password) {
-            return res.status(400).json({ message: 'Please provide username/email and password' })
+            return res.status(400).json({ message: 'Please provide an email/username and password' })
         }
 
+        // Still allow the user to log in using either their email OR username in the DB
         const user = await User.findOne({
             $or: [
                 { email: identifier.toLowerCase() },
