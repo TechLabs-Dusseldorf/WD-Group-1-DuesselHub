@@ -1,23 +1,48 @@
-import dotenv from "dotenv";
-import express from "express";
-import upload from "../middleware/upload.js";
-import { createIssue, getAllIssues, endorseIssue, updateIssueStatus } from "../controllers/issueController.js";
-import { createComment, getCommentsByIssue } from "../controllers/commentController.js";
+import dotenv from "dotenv"
+import express from "express"
+import upload from "../middleware/upload.js"
+import authRoutes from "./auth.js"
+import protect, { authorize, optionalProtect } from "../middleware/authMiddleware.js"
 
-dotenv.config();
+import {
+  createIssue,
+  deleteIssue,
+  endorseIssue,
+  getAllIssues,
+  softDeleteIssue,
+  updateIssue,
+  updateIssueStatus,
+} from "../controllers/issueController.js"
 
-const router = express.Router();
+import {
+  createComment,
+  getCommentsByIssue,
+} from "../controllers/commentController.js"
 
-router.get('/test', (req, res) => {
-  res.status(200).json({ message: 'Router is working!' });
-});
+dotenv.config()
 
-router.post('/issues', upload.single('photo'), createIssue);
-router.get('/issues', getAllIssues);
-router.patch('/:id/endorse', endorseIssue);
-router.patch('/:id/status', updateIssueStatus);
+const router = express.Router()
+
+// Auth routes
+router.use("/auth", authRoutes)
+
+// Health check
+router.get("/test", (req, res) => {
+  res.status(200).json({ message: "Router is working!" })
+})
 
 router.post("/issues/:issueId/comments", createComment);
 router.get("/issues/:issueId/comments", getCommentsByIssue);
 
-export default router;
+// Issue routes
+router.post("/issues", protect, upload.single("photo"), createIssue)
+router.get("/issues", optionalProtect, getAllIssues)
+router.patch("/issues/:id/endorse", protect, endorseIssue)
+// Backward compatible endpoint used by current frontend
+router.patch("/:id/endorse", protect, endorseIssue)
+router.patch("/issues/:id/status", protect, authorize("moderator", "admin"), updateIssueStatus)
+router.put("/issues/:id", protect, updateIssue)
+router.patch("/issues/:id/soft-delete", protect, authorize("moderator", "admin"), softDeleteIssue)
+router.delete("/issues/:id", protect, authorize("admin"), deleteIssue)
+
+export default router

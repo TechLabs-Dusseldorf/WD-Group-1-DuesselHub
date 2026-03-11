@@ -9,8 +9,11 @@ const issueSchema = new Schema({
   location: { type: String, required: true, trim: true },
   photoUrl: { type: String },
   endorsements: { type: Number, default: 0, min: 0 },
-  status: { type: String, enum: ['Open', 'In Progress', 'Resolved'], default: 'Open'},
-  createdAt: { type: Date, default: Date.now }
+  endorsedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  status: { type: String, enum: ['Open', 'In Progress', 'Resolved'], default: 'Open' },
+  deleted: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now },
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 });
 
 export default mongoose.model("Issue", issueSchema);

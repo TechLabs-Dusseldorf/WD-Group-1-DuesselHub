@@ -3,26 +3,30 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { endorseIssue, getIssues } from '../api/issues.js'
 import { getMockIssues } from '../api/mock.js'
 import { getIssueKey } from '../utils/issues.js'
+import { useAuth } from '../context/AuthContext.jsx'
 
 function enrichIssues(data, voteMap) {
   return data.map((issue) => {
     const issueKey = getIssueKey(issue)
+    const serverVote = typeof issue.myVote === 'number' ? issue.myVote : null
+    const persistedVote = voteMap.get(issueKey) ?? 0
     return {
       ...issue,
       issueKey,
-      myVote: voteMap.get(issueKey) ?? 0,
+      myVote: serverVote ?? persistedVote,
       endorsements: issue.endorsements ?? 0,
     }
   })
 }
 
 export function useIssues(sortKey) {
+  const { token, user } = useAuth()
   const queryClient = useQueryClient()
   const voteMapRef = useRef(new Map())
   const [sortError, setSortError] = useState(null)
   const [voteError, setVoteError] = useState(null)
 
-  const queryKey = ['issues', sortKey]
+  const queryKey = ['issues', sortKey, user?.id ?? null, token ?? null]
 
   const { data: issues = [], isLoading: loading, isError, refetch } = useQuery({
     queryKey,
@@ -30,7 +34,9 @@ export function useIssues(sortKey) {
       setSortError(null)
       try {
         const data = await getIssues({ sortKey, signal })
-        return enrichIssues(data, voteMapRef.current)
+        const enriched = enrichIssues(data, voteMapRef.current)
+        voteMapRef.current = new Map(enriched.map((issue) => [issue.issueKey, issue.myVote ?? 0]))
+        return enriched
       } catch (e) {
         if (e?.name === 'AbortError') throw e
         setSortError(`Sorting "${sortKey}" failed. Please try again in a moment.`)
@@ -58,10 +64,10 @@ export function useIssues(sortKey) {
 
       return { snapshot, prevVote }
     },
-    onError: (_err, { issueKey }, ctx) => {
+    onError: (err, { issueKey }, ctx) => {
       queryClient.setQueryData(queryKey, ctx.snapshot)
       voteMapRef.current.set(issueKey, ctx.prevVote)
-      setVoteError('Endorsement failed. Please try again.')
+      setVoteError(err?.message ? `Endorsement failed: ${err.message}` : 'Endorsement failed. Please try again.')
     },
     onSuccess: (updatedIssue, { issueKey, nextVote }) => {
       if (!updatedIssue || typeof updatedIssue !== 'object') return

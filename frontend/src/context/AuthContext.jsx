@@ -28,9 +28,9 @@ export function AuthProvider({ children }) {
   const { token: storedToken, user: storedUser } = readStorage()
 
   const [token, setToken] = useState(storedToken)
-  const [user, setUser] = useState(storedUser)
+  const [user, setUser] = useState(storedToken ? storedUser : null)
 
-  const isLoggedIn = token !== null || user !== null
+  const isLoggedIn = token !== null
 
   function login(data) {
     const newToken = extractToken(data)

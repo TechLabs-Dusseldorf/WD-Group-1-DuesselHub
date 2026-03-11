@@ -40,7 +40,7 @@ export function RegisterPage() {
     formState: { errors, isValid, isSubmitting },
   } = useForm({
     mode: 'onBlur',
-    reValidateMode: 'onChange',
+    reValidateMode: 'onBlur',
     defaultValues: {
       username: draft.username ?? '',
       email: draft.email ?? '',
@@ -98,7 +98,13 @@ export function RegisterPage() {
               type="text"
               autoComplete="off"
               className={`auth-form__input${errors.username ? ' is-invalid' : ''}`}
-              {...register('username', { required: 'Username is required.' })}
+              {...register('username', {
+                required: 'Username is required.',
+                minLength: {
+                  value: 3,
+                  message: 'Username must be at least 3 characters long.',
+                },
+              })}
             />
             {errors.username && (
               <p className="auth-form__field-error" role="alert">
