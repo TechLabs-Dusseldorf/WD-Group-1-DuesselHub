@@ -62,6 +62,7 @@ body {
     display: flex;
     align-items: center;
     justify-self: end;
+    gap: 10px;
 }
 
 .btn--topbar-secondary {
@@ -202,6 +203,30 @@ body {
 .btn--topbar:hover {
     background: var(--primary-dark);
     border-color: var(--primary-dark);
+}
+
+.btn--topbar.btn--topbar-profile {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+    color: #111827;
+}
+
+.btn--topbar.btn--topbar-profile:hover {
+    background: #d1d5db;
+    border-color: #6b7280;
+    color: #111827;
+}
+
+.btn--topbar.btn--topbar-logout {
+    background: #1183b0;
+    border-color: #D1D5DB;
+    color: #ffffff;
+}
+
+.btn--topbar.btn--topbar-logout:hover {
+    background: #862007;
+    border-color: #d64114;
+    color: #ffffff;
 }
 
 .btn--topbar.btn--disabled {
@@ -858,6 +883,29 @@ body {
     width: 100%;
     min-height: 46px;
     font-size: 16px;
+}
+
+.profile-page {
+    display: flex;
+    justify-content: center;
+}
+
+.profile-card {
+    width: min(520px, 100%);
+    margin-top: 24px;
+}
+
+.profile-actions {
+    margin-top: 8px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+
+.profile-card .auth-form__input:disabled {
+    background: #f3f5f7;
+    color: #5b6570;
+    cursor: not-allowed;
 }
 
 .auth-form__footer {
