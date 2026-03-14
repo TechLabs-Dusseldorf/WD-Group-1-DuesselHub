@@ -3,8 +3,15 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'react-toastify'
 import { TopBar } from '../components/TopBar.jsx'
 import { LoadingState } from '../components/LoadingState.jsx'
-import { getCurrentUserProfile, updateCurrentUserProfile } from '../api/profileApi.js'
+import { SortChips } from '../components/SortChips.jsx'
+import { IssueList } from '../components/IssueList.jsx'
+import {
+  getCurrentUserProfile,
+  updateCurrentUserProfile,
+  verifyCurrentPassword,
+} from '../api/profileApi.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useMyIssues } from '../hooks/useMyIssues.js'
 
 const EMAIL_RULE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PASSWORD_RULE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/
@@ -13,7 +20,7 @@ function toFormValues(user) {
   return {
     username: user?.username ?? '',
     email: user?.email ?? '',
-    oldPassword: '',
+    currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   }
@@ -26,13 +33,32 @@ export function ProfilePage() {
   const [loadError, setLoadError] = useState(null)
   const [submitError, setSubmitError] = useState(null)
   const [isEditMode, setIsEditMode] = useState(false)
+  const [passwordStep, setPasswordStep] = useState('hidden')
+  const [verifiedCurrentPassword, setVerifiedCurrentPassword] = useState('')
+  const [passwordFlowError, setPasswordFlowError] = useState(null)
+  const [isVerifyingPassword, setIsVerifyingPassword] = useState(false)
+  const [myIssuesSortKey, setMyIssuesSortKey] = useState('newest')
+  const [myIssuesSearchInput, setMyIssuesSearchInput] = useState('')
+  const [myIssuesSearch, setMyIssuesSearch] = useState('')
+
+  const {
+    issues: myIssues,
+    loading: myIssuesLoading,
+    error: myIssuesError,
+    reload: reloadMyIssues,
+    deleteIssue,
+  } = useMyIssues({
+    sortKey: myIssuesSortKey,
+    search: myIssuesSearch,
+  })
 
   const {
     register,
     handleSubmit,
     reset,
+    resetField,
     watch,
-    trigger,
+    getValues,
     formState: { errors, isValid, isSubmitting },
   } = useForm({
     mode: 'onChange',
@@ -42,14 +68,16 @@ export function ProfilePage() {
 
   const username = watch('username')
   const email = watch('email')
-  const oldPassword = watch('oldPassword')
   const newPassword = watch('newPassword')
-  const confirmPassword = watch('confirmPassword')
-  const isPasswordChangeRequested = Boolean(oldPassword || newPassword || confirmPassword)
+  const passwordReadyForSave = passwordStep === 'set'
+  const hasPasswordChanges = passwordReadyForSave && String(newPassword ?? '').length > 0
 
   useEffect(() => {
-    void trigger(['oldPassword', 'newPassword', 'confirmPassword'])
-  }, [oldPassword, newPassword, confirmPassword, trigger])
+    const timeoutId = window.setTimeout(() => {
+      setMyIssuesSearch(String(myIssuesSearchInput ?? '').trim())
+    }, 250)
+    return () => window.clearTimeout(timeoutId)
+  }, [myIssuesSearchInput])
 
   const hasChanges = useMemo(() => {
     if (!profile) return false
@@ -59,8 +87,8 @@ export function ProfilePage() {
       normalizedUsername !== String(profile.username ?? '') ||
       normalizedEmail !== String(profile.email ?? '')
 
-    return baseChanged || isPasswordChangeRequested
-  }, [profile, username, email, isPasswordChangeRequested])
+    return baseChanged || hasPasswordChanges
+  }, [profile, username, email, hasPasswordChanges])
 
   async function loadProfile(signal) {
     setStatus('loading')
@@ -72,6 +100,9 @@ export function ProfilePage() {
       reset(toFormValues(currentUser))
       setSubmitError(null)
       setIsEditMode(false)
+      setPasswordStep('hidden')
+      setVerifiedCurrentPassword('')
+      setPasswordFlowError(null)
       setStatus('ready')
     } catch (err) {
       if (err?.name === 'AbortError') return
@@ -88,28 +119,88 @@ export function ProfilePage() {
 
   function handleStartEdit() {
     setSubmitError(null)
+    setPasswordFlowError(null)
+    setPasswordStep('hidden')
+    setVerifiedCurrentPassword('')
     setIsEditMode(true)
+    if (profile) {
+      reset(toFormValues(profile))
+    }
   }
 
   function handleDiscard() {
     if (!profile) return
     reset(toFormValues(profile))
     setSubmitError(null)
+    setPasswordFlowError(null)
     setIsEditMode(false)
+    setPasswordStep('hidden')
+    setVerifiedCurrentPassword('')
+  }
+
+  function handleStartPasswordChange() {
+    if (!isEditMode) return
+    setPasswordStep('verify')
+    setPasswordFlowError(null)
+    setVerifiedCurrentPassword('')
+    resetField('currentPassword', { defaultValue: '' })
+    resetField('newPassword', { defaultValue: '' })
+    resetField('confirmPassword', { defaultValue: '' })
+  }
+
+  async function handleVerifyPassword() {
+    const passwordValue = String(getValues('currentPassword') ?? '')
+    if (!passwordValue.length) {
+      setPasswordFlowError('Please enter your current password first.')
+      return
+    }
+
+    setPasswordFlowError(null)
+    setIsVerifyingPassword(true)
+    try {
+      await verifyCurrentPassword(passwordValue)
+      setVerifiedCurrentPassword(passwordValue)
+      setPasswordStep('set')
+      resetField('currentPassword', { defaultValue: '' })
+      toast.success('Current password verified.')
+    } catch (err) {
+      setPasswordFlowError(err?.message ?? 'Current password could not be verified.')
+    } finally {
+      setIsVerifyingPassword(false)
+    }
+  }
+
+  async function handleDeleteIssue(issue) {
+    if (!issue?._id) return
+    const issueTitle = String(issue.title ?? 'this issue')
+    const confirmed = window.confirm(`Delete "${issueTitle}"? This action cannot be undone.`)
+    if (!confirmed) return
+
+    try {
+      await deleteIssue(issue._id)
+      toast.success('Issue deleted successfully.')
+    } catch (err) {
+      toast.error(err?.message ?? 'Issue could not be deleted.')
+    }
   }
 
   const onSubmit = handleSubmit(async (values) => {
     if (!profile) return
     setSubmitError(null)
+    setPasswordFlowError(null)
 
     const payload = {
       username: String(values.username ?? '').trim(),
       email: String(values.email ?? '').trim(),
     }
 
-    if (isPasswordChangeRequested) {
-      payload.oldPassword = values.oldPassword
-      payload.currentPassword = values.oldPassword
+    if (passwordReadyForSave) {
+      if (!verifiedCurrentPassword) {
+        setSubmitError('Please verify your current password before setting a new one.')
+        return
+      }
+      payload.oldPassword = verifiedCurrentPassword
+      payload.currentPassword = verifiedCurrentPassword
       payload.newPassword = values.newPassword
       payload.password = values.newPassword
     }
@@ -127,6 +218,8 @@ export function ProfilePage() {
       updateUser(nextProfile)
       reset(toFormValues(nextProfile))
       setIsEditMode(false)
+      setPasswordStep('hidden')
+      setVerifiedCurrentPassword('')
       toast.success('Profile updated successfully.')
     } catch (err) {
       setSubmitError(err?.message ?? 'Profile update failed.')
@@ -164,7 +257,7 @@ export function ProfilePage() {
                   id="username"
                   type="text"
                   disabled={!isEditMode}
-                  className={`auth-form__input${errors.username ? ' is-invalid' : ''}`}
+                  className={`auth-form__input${isEditMode ? ' auth-form__input--active' : ''}${errors.username ? ' is-invalid' : ''}`}
                   {...register('username', {
                     required: 'Username is required.',
                     minLength: {
@@ -188,7 +281,7 @@ export function ProfilePage() {
                   id="email"
                   type="email"
                   disabled={!isEditMode}
-                  className={`auth-form__input${errors.email ? ' is-invalid' : ''}`}
+                  className={`auth-form__input${isEditMode ? ' auth-form__input--active' : ''}${errors.email ? ' is-invalid' : ''}`}
                   {...register('email', {
                     required: 'E-mail is required.',
                     pattern: {
@@ -204,30 +297,32 @@ export function ProfilePage() {
                 )}
               </div>
 
-              {isEditMode && (
-                <>
-                  <div className="auth-form__field">
-                    <label className="auth-form__label" htmlFor="oldPassword">
-                      Current password
-                    </label>
-                    <input
-                      id="oldPassword"
-                      type="password"
-                      className={`auth-form__input${errors.oldPassword ? ' is-invalid' : ''}`}
-                      {...register('oldPassword', {
-                        validate: (value) => {
-                          if (!isPasswordChangeRequested) return true
-                          return String(value ?? '').length > 0 || 'Please confirm your current password.'
-                        },
-                      })}
-                    />
-                    {errors.oldPassword && (
-                      <p className="auth-form__field-error" role="alert">
-                        {errors.oldPassword.message}
-                      </p>
-                    )}
-                  </div>
+              {isEditMode && passwordStep === 'verify' && (
+                <div className="auth-form__field">
+                  <label className="auth-form__label" htmlFor="currentPassword">
+                    Current password
+                  </label>
+                  <input
+                    id="currentPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    data-lpignore="true"
+                    className={`auth-form__input auth-form__input--active${errors.currentPassword ? ' is-invalid' : ''}`}
+                    {...register('currentPassword')}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn--secondary"
+                    onClick={() => void handleVerifyPassword()}
+                    disabled={isVerifyingPassword}
+                  >
+                    {isVerifyingPassword ? 'Verifying…' : 'Verify current password'}
+                  </button>
+                </div>
+              )}
 
+              {isEditMode && passwordStep === 'set' && (
+                <>
                   <div className="auth-form__field">
                     <label className="auth-form__label" htmlFor="newPassword">
                       New password
@@ -235,10 +330,12 @@ export function ProfilePage() {
                     <input
                       id="newPassword"
                       type="password"
-                      className={`auth-form__input${errors.newPassword ? ' is-invalid' : ''}`}
+                      autoComplete="new-password"
+                      data-lpignore="true"
+                      className={`auth-form__input auth-form__input--active${errors.newPassword ? ' is-invalid' : ''}`}
                       {...register('newPassword', {
+                        required: 'Please enter a new password.',
                         validate: (value) => {
-                          if (!isPasswordChangeRequested) return true
                           return (
                             PASSWORD_RULE.test(String(value ?? '')) ||
                             'Password must be at least 8 characters and include upper, lower, and a special character.'
@@ -260,11 +357,12 @@ export function ProfilePage() {
                     <input
                       id="confirmPassword"
                       type="password"
-                      className={`auth-form__input${errors.confirmPassword ? ' is-invalid' : ''}`}
+                      autoComplete="new-password"
+                      data-lpignore="true"
+                      className={`auth-form__input auth-form__input--active${errors.confirmPassword ? ' is-invalid' : ''}`}
                       {...register('confirmPassword', {
+                        required: 'Please confirm your new password.',
                         validate: (value) => {
-                          if (!isPasswordChangeRequested) return true
-                          if (!String(value ?? '').length) return 'Please confirm your new password.'
                           return value === newPassword || 'Passwords do not match.'
                         },
                       })}
@@ -276,6 +374,12 @@ export function ProfilePage() {
                     )}
                   </div>
                 </>
+              )}
+
+              {passwordFlowError && (
+                <p className="form__error" role="alert">
+                  {passwordFlowError}
+                </p>
               )}
 
               {submitError && (
@@ -300,6 +404,13 @@ export function ProfilePage() {
                     <button
                       type="button"
                       className="btn btn--secondary btn--large auth-form__submit"
+                      onClick={handleStartPasswordChange}
+                    >
+                      Change Password
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn--soft-danger btn--large auth-form__submit"
                       onClick={handleDiscard}
                     >
                       Discard
@@ -307,7 +418,13 @@ export function ProfilePage() {
                     <button
                       type="submit"
                       className="btn btn--primary btn--large auth-form__submit"
-                      disabled={!isValid || !hasChanges || isSubmitting}
+                      disabled={
+                        !isValid ||
+                        !hasChanges ||
+                        isSubmitting ||
+                        passwordStep === 'verify' ||
+                        (passwordStep === 'set' && !hasPasswordChanges)
+                      }
                     >
                       {isSubmitting ? 'Saving…' : 'Save changes'}
                     </button>
@@ -315,6 +432,54 @@ export function ProfilePage() {
                 )}
               </div>
             </form>
+          )}
+        </section>
+
+        <section className="my-issues-panel" aria-label="My issues">
+          <div className="my-issues-panel__header">
+            <h2 className="my-issues-panel__title">My issues</h2>
+            <p className="my-issues-panel__subtitle">Issues created by your account.</p>
+          </div>
+
+          <div className="my-issues-controls">
+            <SortChips value={myIssuesSortKey} onChange={setMyIssuesSortKey} />
+            <input
+              type="search"
+              className="auth-form__input auth-form__input--active"
+              placeholder="Search your issues..."
+              value={myIssuesSearchInput}
+              onChange={(e) => setMyIssuesSearchInput(e.target.value)}
+            />
+          </div>
+
+          {myIssuesLoading && <LoadingState />}
+
+          {!myIssuesLoading && myIssuesError && (
+            <div className="state state--error" role="alert">
+              <div className="state__title">We couldn&apos;t load your issues</div>
+              <p className="state__subtitle">{myIssuesError}</p>
+              <div className="state__actions">
+                <button type="button" className="btn btn--primary" onClick={() => void reloadMyIssues()}>
+                  Retry
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!myIssuesLoading && !myIssuesError && myIssues.length === 0 && (
+            <div className="state state--empty">
+              <div className="state__title">No issues yet</div>
+              <p className="state__subtitle">You have not created any issues yet.</p>
+              <div className="state__actions">
+                <button type="button" className="btn" onClick={() => void reloadMyIssues()}>
+                  Load again
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!myIssuesLoading && !myIssuesError && myIssues.length > 0 && (
+            <IssueList issues={myIssues} onDelete={handleDeleteIssue} />
           )}
         </section>
       </main>

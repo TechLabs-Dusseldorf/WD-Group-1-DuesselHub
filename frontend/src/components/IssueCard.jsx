@@ -11,7 +11,7 @@ function formatDate(isoString) {
   }).format(date)
 }
 
-export function IssueCard({ issue, onVote }) {
+export function IssueCard({ issue, onVote, onDelete }) {
   const placeholderSrc = '/issue-image-placeholder.svg'
   const photoUrl = issue?.photoUrl ?? ''
   const photoSrc = photoUrl ? photoUrl : placeholderSrc
@@ -29,8 +29,13 @@ export function IssueCard({ issue, onVote }) {
     e.currentTarget.src = placeholderSrc
   }
 
+  const handleDelete = () => {
+    if (!onDelete) return
+    onDelete(issue)
+  }
+
   return (
-    <article className="issue-card">
+    <article className={`issue-card${onDelete ? ' issue-card--with-actions' : ''}`}>
       <div className="issue-card__vote">
         <button
           type="button"
@@ -74,6 +79,14 @@ export function IssueCard({ issue, onVote }) {
         <p className="issue-card__description" title={issue.description}>
           {issue.description}
         </p>
+
+        {onDelete && (
+          <div className="issue-card__actions">
+            <button type="button" className="btn btn--secondary issue-card__deleteBtn" onClick={handleDelete}>
+              Delete
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="issue-card__photo">

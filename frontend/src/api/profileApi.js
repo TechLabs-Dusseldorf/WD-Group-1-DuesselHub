@@ -47,3 +47,12 @@ export async function updateCurrentUserProfile(payload, { signal } = {}) {
   if (!user) throw new Error('Invalid profile update response.')
   return user
 }
+
+export async function verifyCurrentPassword(currentPassword, { signal } = {}) {
+  const data = await apiRequest('/api/auth/verify-password', {
+    method: 'POST',
+    body: { currentPassword },
+    signal,
+  })
+  return Boolean(data?.ok)
+}

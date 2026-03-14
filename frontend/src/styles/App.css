@@ -473,6 +473,31 @@ body {
     overflow: hidden;
 }
 
+.issue-card__actions {
+    margin-top: 10px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.issue-card__deleteBtn {
+    min-height: 36px;
+    padding: 7px 12px;
+    font-size: 13px;
+}
+
+.issue-card--with-actions .issue-card__main {
+    position: relative;
+    padding-right: 92px;
+}
+
+.issue-card--with-actions .issue-card__actions {
+    position: absolute;
+    right: 0;
+    top: 46%;
+    transform: translateY(-50%);
+    margin-top: 0;
+}
+
 @media (max-width: 520px) {
     .issue-card__vote {
         padding-inline: 10px;
@@ -719,6 +744,18 @@ body {
     border-color: #c7ced6;
 }
 
+.btn--soft-danger {
+    background: #fde8e8;
+    border-color: #f2b8b8;
+    color: #9f1239;
+}
+
+.btn--soft-danger:hover {
+    background: #fad1d1;
+    border-color: #e89e9e;
+    color: #881337;
+}
+
 .photo-preview {
     border: 1px dashed #cfd6dd;
     border-radius: 12px;
@@ -887,12 +924,13 @@ body {
 
 .profile-page {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
 }
 
 .profile-card {
     width: min(520px, 100%);
-    margin-top: 24px;
+    margin: 24px auto 0;
 }
 
 .profile-actions {
@@ -906,6 +944,42 @@ body {
     background: #f3f5f7;
     color: #5b6570;
     cursor: not-allowed;
+}
+
+.profile-card .auth-form__input--active {
+    background: #ffffff;
+    color: var(--text);
+    cursor: text;
+}
+
+.my-issues-panel {
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 14px;
+}
+
+.my-issues-panel__header {
+    margin-bottom: 10px;
+}
+
+.my-issues-panel__title {
+    margin: 0;
+    font-size: 22px;
+    line-height: 1.2;
+}
+
+.my-issues-panel__subtitle {
+    margin: 6px 0 0;
+    color: var(--muted);
+}
+
+.my-issues-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
 }
 
 .auth-form__footer {
