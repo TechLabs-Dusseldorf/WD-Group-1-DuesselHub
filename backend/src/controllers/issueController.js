@@ -258,14 +258,31 @@ export const softDeleteIssue = async (req, res) => {
   }
 };
 
+// Get "My Issues" list
+export const getMyIssues = async (req, res) => {
+  try {
+    // Find issues where the 'user' field matches the currently logged-in user
+    const issues = await Issue.find({ user: req.user._id, deleted: { $ne: true } }).sort({ createdAt: -1 });
+    res.status(200).json(issues);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Delete my issue
 export const deleteIssue = async (req, res) => {
   try {
     const issue = await Issue.findById(req.params.id);
-    if (!issue) return res.status(404).json({ message: "Issue not found" });
+    if (!issue) return res.status(404).json({ message: 'Issue not found' });
 
-    await issue.deleteOne();
-    return res.status(204).send();
+    // Security Check: Make sure the user trying to delete it actually owns it
+    if (issue.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'You are not authorized to delete this issue' });
+    }
+
+    await issue.deleteOne(); // Removes it from the database permanently
+    res.status(200).json({ message: 'Issue successfully deleted' });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
