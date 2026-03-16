@@ -27,7 +27,7 @@ const PORT = process.env.PORT || 5001
 const connectDB = async () => {
     try {
         // Read the variable from the .env file
-        const conn = await mongoose.connect(process.env.MONGO_URI);
+        const conn = await mongoose.connect(process.env.MONGODB_URI);
 
         console.log(`MongoDB Connected: ${conn.connection.host}`);
     } catch (error) {
