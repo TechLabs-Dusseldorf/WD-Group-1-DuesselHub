@@ -41,13 +41,22 @@ export function TopBar({ onReportIssue }) {
 
                     {!isAuthPage && (
                         isLoggedIn ? (
-                            <button
-                                type="button"
-                                className="btn btn--topbar btn--topbar-secondary"
-                                onClick={handleLogout}
-                            >
-                                Logout
-                            </button>
+                            <>
+                                <button
+                                    type="button"
+                                    className="btn btn--topbar btn--topbar-profile"
+                                    onClick={() => navigate('/profile')}
+                                >
+                                    Profile
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn btn--topbar btn--topbar-logout"
+                                    onClick={handleLogout}
+                                >
+                                    Logout
+                                </button>
+                            </>
                         ) : (
                             <button
                                 type="button"
@@ -67,7 +76,7 @@ export function TopBar({ onReportIssue }) {
                         disabled={!isLoggedIn}
                         onClick={isLoggedIn ? handleReportClick : undefined}
                     >
-                        Report issue
+                        Report Issue
                     </button>
                 </div>
             </div>

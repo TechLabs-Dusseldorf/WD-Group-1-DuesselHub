@@ -22,6 +22,19 @@ function extractUser(data) {
   return data?.user ?? data?.data?.user ?? null
 }
 
+function persistSession(token, user) {
+  if (token) {
+    localStorage.setItem(STORAGE_TOKEN_KEY, token)
+  } else {
+    localStorage.removeItem(STORAGE_TOKEN_KEY)
+  }
+  if (user) {
+    localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(user))
+  } else {
+    localStorage.removeItem(STORAGE_USER_KEY)
+  }
+}
+
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
@@ -38,28 +51,25 @@ export function AuthProvider({ children }) {
 
     setToken(newToken)
     setUser(newUser)
-
-    if (newToken) {
-      localStorage.setItem(STORAGE_TOKEN_KEY, newToken)
-    } else {
-      localStorage.removeItem(STORAGE_TOKEN_KEY)
-    }
-    if (newUser) {
-      localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(newUser))
-    } else {
-      localStorage.removeItem(STORAGE_USER_KEY)
-    }
+    persistSession(newToken, newUser)
   }
 
   function logout() {
     setToken(null)
     setUser(null)
-    localStorage.removeItem(STORAGE_TOKEN_KEY)
-    localStorage.removeItem(STORAGE_USER_KEY)
+    persistSession(null, null)
+  }
+
+  function updateUser(nextUser) {
+    setUser((prevUser) => {
+      const mergedUser = { ...(prevUser ?? {}), ...(nextUser ?? {}) }
+      persistSession(token, mergedUser)
+      return mergedUser
+    })
   }
 
   return (
-    <AuthContext.Provider value={{ token, user, isLoggedIn, login, logout }}>
+    <AuthContext.Provider value={{ token, user, isLoggedIn, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   )

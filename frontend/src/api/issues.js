@@ -10,6 +10,17 @@ export async function getIssues({ sortKey, signal } = {}) {
   return Array.isArray(data) ? data : []
 }
 
+export async function getMyIssues({ sortKey, search, signal } = {}) {
+  const apiSortValue = sortKey === 'most-endorsed' ? 'most_endorsed' : sortKey
+  const params = new URLSearchParams()
+  if (apiSortValue) params.set('sort', apiSortValue)
+  if (search) params.set('search', search)
+  const query = params.toString()
+  const path = query ? `/api/issues/mine?${query}` : '/api/issues/mine'
+  const data = await httpGet(path, { signal })
+  return Array.isArray(data) ? data : []
+}
+
 export async function createIssue(payload, { signal } = {}) {
   if (payload instanceof FormData) {
     return await apiRequest('/api/issues', {
@@ -31,4 +42,12 @@ export async function endorseIssue(issueId, action, { signal } = {}) {
     { action },
     { signal },
   )
+}
+
+export async function deleteOwnIssue(issueId, { signal } = {}) {
+  if (!issueId) throw new Error('issueId is required')
+  await apiRequest(`/api/issues/${encodeURIComponent(issueId)}`, {
+    method: 'DELETE',
+    signal,
+  })
 }
