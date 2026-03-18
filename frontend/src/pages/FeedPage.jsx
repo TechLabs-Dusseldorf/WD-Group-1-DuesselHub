@@ -8,6 +8,7 @@ import { EmptyState } from '../components/EmptyState.jsx'
 import { IssueList } from '../components/IssueList.jsx'
 import { useIssues } from '../hooks/useIssues.js'
 import { ReportIssueModal } from '../components/ReportIssueModal.jsx'
+import { CommentsModal } from '../components/CommentsModal.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 
 const SORT_STORAGE_KEY = 'feed.sortKey'
@@ -22,6 +23,7 @@ export function FeedPage() {
   const { issues, loading, error, sortError, voteError, clearVoteError, reload, handleVote } =
     useIssues(sortKey)
   const [isReportOpen, setIsReportOpen] = useState(false)
+  const [activeIssueForComments, setActiveIssueForComments] = useState(null)
   const { isLoggedIn } = useAuth()
 
   useEffect(() => {
@@ -51,6 +53,14 @@ export function FeedPage() {
       return
     }
     handleVote(issueKey, direction)
+  }
+
+  function handleOpenComments(issue) {
+    setActiveIssueForComments(issue)
+  }
+
+  function handleCloseComments() {
+    setActiveIssueForComments(null)
   }
 
   return (
@@ -92,7 +102,11 @@ export function FeedPage() {
           )}
 
           {!loading && !error && issues.length > 0 && (
-            <IssueList issues={issues} onVote={handleVoteGated} />
+            <IssueList
+              issues={issues}
+              onVote={handleVoteGated}
+              onOpenComments={handleOpenComments}
+            />
           )}
         </section>
       </main>
@@ -102,6 +116,11 @@ export function FeedPage() {
         </div>
       )}
       <ReportIssueModal open={isReportOpen} onClose={handleCloseReport} onSubmitted={reload} />
+      <CommentsModal
+        isOpen={Boolean(activeIssueForComments)}
+        issue={activeIssueForComments}
+        onClose={handleCloseComments}
+      />
     </div>
   )
 }

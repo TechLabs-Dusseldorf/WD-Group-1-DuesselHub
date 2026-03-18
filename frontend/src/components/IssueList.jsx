@@ -1,11 +1,16 @@
 import { IssueCard } from './IssueCard.jsx'
 
-export function IssueList({ issues, onVote }) {
+export function IssueList({ issues, onVote, onOpenComments }) {
   if (!Array.isArray(issues) || issues.length === 0) return null
   return (
     <div className="issue-list">
       {issues.map((issue) => (
-        <IssueCard key={issue.issueKey} issue={issue} onVote={onVote} />
+        <IssueCard
+          key={issue.issueKey}
+          issue={issue}
+          onVote={onVote}
+          onOpenComments={onOpenComments}
+        />
       ))}
     </div>
   )
