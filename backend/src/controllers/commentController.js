@@ -1,15 +1,19 @@
 import Comment from "../models/Comment.js";
 import Issue from "../models/Issue.js";
+import mongoose from "mongoose";
 import { validateComment } from "../middleware/validateComments.js";
 
 export const createComment = async (req, res) => {
   try {
     const { issueId } = req.params;
+    if (!mongoose.isValidObjectId(issueId)) {
+      return res.status(400).json({ message: "Invalid issue id." });
+    }
 
     const result = validateComment(req.body);
     if (!result.success) {
       return res.status(400).json({
-        errors: result.error.errors
+        errors: result.error.issues
       });
     }
 
@@ -19,7 +23,7 @@ export const createComment = async (req, res) => {
     }
 
     const comment = new Comment({
-      issueid: issueId,
+      issueId,
       ...result.data
     });
 
@@ -38,6 +42,9 @@ export const createComment = async (req, res) => {
 export const getCommentsByIssue = async (req, res) => {
   try {  
     const { issueId } = req.params;
+    if (!mongoose.isValidObjectId(issueId)) {
+      return res.status(400).json({ message: "Invalid issue id." });
+    }
 
     const issueExists = await Issue.findById(issueId);
     if (!issueExists) {
@@ -45,7 +52,7 @@ export const getCommentsByIssue = async (req, res) => {
     }
 
     
-    const comments = await Comment.find({ issueid: issueId })
+    const comments = await Comment.find({ issueId })
       .sort({ createdAt: -1 });
 
     return res.status(200).json(comments);
