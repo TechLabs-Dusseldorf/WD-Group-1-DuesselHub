@@ -5,10 +5,10 @@ import { TopBar } from '../components/TopBar.jsx'
 import { LoadingState } from '../components/LoadingState.jsx'
 import { SortChips } from '../components/SortChips.jsx'
 import { IssueList } from '../components/IssueList.jsx'
+import { ReportIssueModal } from '../components/ReportIssueModal.jsx'
 import {
   getCurrentUserProfile,
   updateCurrentUserProfile,
-  verifyCurrentPassword,
 } from '../api/profileApi.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useMyIssues } from '../hooks/useMyIssues.js'
@@ -28,15 +28,13 @@ function toFormValues(user) {
 
 export function ProfilePage() {
   const { updateUser } = useAuth()
+  const [isReportOpen, setIsReportOpen] = useState(false)
   const [profile, setProfile] = useState(null)
   const [status, setStatus] = useState('loading')
   const [loadError, setLoadError] = useState(null)
   const [submitError, setSubmitError] = useState(null)
   const [isEditMode, setIsEditMode] = useState(false)
   const [passwordStep, setPasswordStep] = useState('hidden')
-  const [verifiedCurrentPassword, setVerifiedCurrentPassword] = useState('')
-  const [passwordFlowError, setPasswordFlowError] = useState(null)
-  const [isVerifyingPassword, setIsVerifyingPassword] = useState(false)
   const [myIssuesSortKey, setMyIssuesSortKey] = useState('newest')
   const [myIssuesSearchInput, setMyIssuesSearchInput] = useState('')
   const [myIssuesSearch, setMyIssuesSearch] = useState('')
@@ -58,7 +56,6 @@ export function ProfilePage() {
     reset,
     resetField,
     watch,
-    getValues,
     formState: { errors, isValid, isSubmitting },
   } = useForm({
     mode: 'onChange',
@@ -101,8 +98,6 @@ export function ProfilePage() {
       setSubmitError(null)
       setIsEditMode(false)
       setPasswordStep('hidden')
-      setVerifiedCurrentPassword('')
-      setPasswordFlowError(null)
       setStatus('ready')
     } catch (err) {
       if (err?.name === 'AbortError') return
@@ -119,10 +114,8 @@ export function ProfilePage() {
 
   function handleStartEdit() {
     setSubmitError(null)
-    setPasswordFlowError(null)
-    setPasswordStep('hidden')
-    setVerifiedCurrentPassword('')
     setIsEditMode(true)
+    setPasswordStep('hidden')
     if (profile) {
       reset(toFormValues(profile))
     }
@@ -132,42 +125,17 @@ export function ProfilePage() {
     if (!profile) return
     reset(toFormValues(profile))
     setSubmitError(null)
-    setPasswordFlowError(null)
     setIsEditMode(false)
     setPasswordStep('hidden')
-    setVerifiedCurrentPassword('')
   }
 
   function handleStartPasswordChange() {
     if (!isEditMode) return
-    setPasswordStep('verify')
-    setPasswordFlowError(null)
-    setVerifiedCurrentPassword('')
+    setPasswordStep('set')
+    setSubmitError(null)
     resetField('currentPassword', { defaultValue: '' })
     resetField('newPassword', { defaultValue: '' })
     resetField('confirmPassword', { defaultValue: '' })
-  }
-
-  async function handleVerifyPassword() {
-    const passwordValue = String(getValues('currentPassword') ?? '')
-    if (!passwordValue.length) {
-      setPasswordFlowError('Please enter your current password first.')
-      return
-    }
-
-    setPasswordFlowError(null)
-    setIsVerifyingPassword(true)
-    try {
-      await verifyCurrentPassword(passwordValue)
-      setVerifiedCurrentPassword(passwordValue)
-      setPasswordStep('set')
-      resetField('currentPassword', { defaultValue: '' })
-      toast.success('Current password verified.')
-    } catch (err) {
-      setPasswordFlowError(err?.message ?? 'Current password could not be verified.')
-    } finally {
-      setIsVerifyingPassword(false)
-    }
   }
 
   async function handleDeleteIssue(issue) {
@@ -184,23 +152,35 @@ export function ProfilePage() {
     }
   }
 
+  function handleReportIssue() {
+    setIsReportOpen(true)
+  }
+
+  function toProfileSubmitMessage(error, { includesPassword } = {}) {
+    const baseMessage = String(error?.message ?? '').trim()
+    if (!baseMessage) {
+      return includesPassword ? 'Password update failed.' : 'Profile update failed.'
+    }
+    return baseMessage
+  }
+
   const onSubmit = handleSubmit(async (values) => {
     if (!profile) return
     setSubmitError(null)
-    setPasswordFlowError(null)
 
     const payload = {
       username: String(values.username ?? '').trim(),
       email: String(values.email ?? '').trim(),
     }
 
-    if (passwordReadyForSave) {
-      if (!verifiedCurrentPassword) {
-        setSubmitError('Please verify your current password before setting a new one.')
+    if (hasPasswordChanges) {
+      const currentPassword = String(values.currentPassword ?? '')
+      if (!currentPassword.length) {
+        setSubmitError('Please enter your current password.')
         return
       }
-      payload.oldPassword = verifiedCurrentPassword
-      payload.currentPassword = verifiedCurrentPassword
+      payload.oldPassword = currentPassword
+      payload.currentPassword = currentPassword
       payload.newPassword = values.newPassword
       payload.password = values.newPassword
     }
@@ -219,16 +199,25 @@ export function ProfilePage() {
       reset(toFormValues(nextProfile))
       setIsEditMode(false)
       setPasswordStep('hidden')
-      setVerifiedCurrentPassword('')
-      toast.success('Profile updated successfully.')
+      if (hasPasswordChanges) {
+        toast.success('Password and profile updated successfully.')
+      } else {
+        toast.success('Profile updated successfully.')
+      }
     } catch (err) {
-      setSubmitError(err?.message ?? 'Profile update failed.')
+      const message = toProfileSubmitMessage(err, { includesPassword: hasPasswordChanges })
+      setSubmitError(message)
+      if (hasPasswordChanges) {
+        toast.error(message)
+      } else {
+        toast.error(message)
+      }
     }
   })
 
   return (
     <div className="app">
-      <TopBar />
+      <TopBar onReportIssue={handleReportIssue} />
       <main className="container page profile-page">
         <section className="auth-card profile-card" aria-label="User profile">
           <h1 className="auth-card__title">Your profile</h1>
@@ -297,32 +286,29 @@ export function ProfilePage() {
                 )}
               </div>
 
-              {isEditMode && passwordStep === 'verify' && (
-                <div className="auth-form__field">
-                  <label className="auth-form__label" htmlFor="currentPassword">
-                    Current password
-                  </label>
-                  <input
-                    id="currentPassword"
-                    type="password"
-                    autoComplete="new-password"
-                    data-lpignore="true"
-                    className={`auth-form__input auth-form__input--active${errors.currentPassword ? ' is-invalid' : ''}`}
-                    {...register('currentPassword')}
-                  />
-                  <button
-                    type="button"
-                    className="btn btn--secondary"
-                    onClick={() => void handleVerifyPassword()}
-                    disabled={isVerifyingPassword}
-                  >
-                    {isVerifyingPassword ? 'Verifying…' : 'Verify current password'}
-                  </button>
-                </div>
-              )}
-
               {isEditMode && passwordStep === 'set' && (
                 <>
+                  <div className="auth-form__field">
+                    <label className="auth-form__label" htmlFor="currentPassword">
+                      Current password
+                    </label>
+                    <input
+                      id="currentPassword"
+                      type="password"
+                      autoComplete="new-password"
+                      data-lpignore="true"
+                      className={`auth-form__input auth-form__input--active${errors.currentPassword ? ' is-invalid' : ''}`}
+                      {...register('currentPassword', {
+                        required: 'Please enter your current password.',
+                      })}
+                    />
+                    {errors.currentPassword && (
+                      <p className="auth-form__field-error" role="alert">
+                        {errors.currentPassword.message}
+                      </p>
+                    )}
+                  </div>
+
                   <div className="auth-form__field">
                     <label className="auth-form__label" htmlFor="newPassword">
                       New password
@@ -376,12 +362,6 @@ export function ProfilePage() {
                 </>
               )}
 
-              {passwordFlowError && (
-                <p className="form__error" role="alert">
-                  {passwordFlowError}
-                </p>
-              )}
-
               {submitError && (
                 <p className="form__error" role="alert">
                   {submitError}
@@ -401,13 +381,15 @@ export function ProfilePage() {
 
                 {isEditMode && (
                   <>
-                    <button
-                      type="button"
-                      className="btn btn--secondary btn--large auth-form__submit"
-                      onClick={handleStartPasswordChange}
-                    >
-                      Change Password
-                    </button>
+                    {passwordStep !== 'set' && (
+                      <button
+                        type="button"
+                        className="btn btn--secondary btn--large auth-form__submit"
+                        onClick={handleStartPasswordChange}
+                      >
+                        Change Password
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="btn btn--soft-danger btn--large auth-form__submit"
@@ -422,7 +404,6 @@ export function ProfilePage() {
                         !isValid ||
                         !hasChanges ||
                         isSubmitting ||
-                        passwordStep === 'verify' ||
                         (passwordStep === 'set' && !hasPasswordChanges)
                       }
                     >
@@ -483,6 +464,11 @@ export function ProfilePage() {
           )}
         </section>
       </main>
+      <ReportIssueModal
+        open={isReportOpen}
+        onClose={() => setIsReportOpen(false)}
+        onSubmitted={reloadMyIssues}
+      />
     </div>
   )
 }

@@ -19,21 +19,21 @@ function enrichIssues(data, voteMap) {
   })
 }
 
-export function useIssues(sortKey) {
+export function useIssues(sortKey, search) {
   const { token, user } = useAuth()
   const queryClient = useQueryClient()
   const voteMapRef = useRef(new Map())
   const [sortError, setSortError] = useState(null)
   const [voteError, setVoteError] = useState(null)
 
-  const queryKey = ['issues', sortKey, user?.id ?? null, token ?? null]
+  const queryKey = ['issues', sortKey, search ?? '', user?.id ?? null, token ?? null]
 
   const { data: issues = [], isLoading: loading, isError, refetch } = useQuery({
     queryKey,
     queryFn: async ({ signal }) => {
       setSortError(null)
       try {
-        const data = await getIssues({ sortKey, signal })
+        const data = await getIssues({ sortKey, search, signal })
         const enriched = enrichIssues(data, voteMapRef.current)
         voteMapRef.current = new Map(enriched.map((issue) => [issue.issueKey, issue.myVote ?? 0]))
         return enriched

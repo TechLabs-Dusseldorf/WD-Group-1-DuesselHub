@@ -1,6 +1,6 @@
 import { apiRequest } from './client.js'
 
-const PROFILE_ENDPOINTS = ['/api/auth/me', '/api/users/me', '/api/auth/profile']
+const PROFILE_ENDPOINT = '/api/users/profile'
 
 function normalizeUser(data) {
   if (!data) return null
@@ -15,36 +15,59 @@ function normalizeUser(data) {
   }
 }
 
-function shouldTryNextEndpoint(err) {
-  return err?.status === 404 || err?.status === 405
-}
-
-async function tryProfileRequest(method, body, { signal } = {}) {
-  let lastError = null
-
-  for (const path of PROFILE_ENDPOINTS) {
-    try {
-      return await apiRequest(path, { method, body, signal })
-    } catch (err) {
-      lastError = err
-      if (!shouldTryNextEndpoint(err)) throw err
-    }
-  }
-
-  throw lastError ?? new Error('Unable to load profile.')
-}
-
 export async function getCurrentUserProfile({ signal } = {}) {
-  const data = await tryProfileRequest('GET', undefined, { signal })
+  const data = await apiRequest(PROFILE_ENDPOINT, { method: 'GET', signal })
   const user = normalizeUser(data)
   if (!user) throw new Error('Invalid profile response.')
   return user
 }
 
 export async function updateCurrentUserProfile(payload, { signal } = {}) {
-  const data = await tryProfileRequest('PATCH', payload, { signal })
+  const requestPayload = payload ?? {}
+  const hasPasswordChange = Boolean(requestPayload.newPassword ?? requestPayload.password)
+  const nextPassword = String(requestPayload.newPassword ?? requestPayload.password ?? '')
+  const currentPassword = String(requestPayload.currentPassword ?? requestPayload.oldPassword ?? '')
+  const hasProfileFields =
+    Object.prototype.hasOwnProperty.call(requestPayload, 'username') ||
+    Object.prototype.hasOwnProperty.call(requestPayload, 'email')
+
+  if (hasPasswordChange) {
+    if (!nextPassword || !currentPassword) {
+      throw new Error('Please provide your current password and a new password.')
+    }
+    try {
+      await apiRequest('/api/users/profile/password', {
+        method: 'PUT',
+        body: { oldPassword: currentPassword, newPassword: nextPassword },
+        signal,
+      })
+    } catch (err) {
+      const message = String(err?.message ?? '').trim()
+      if (!message) {
+        throw new Error('Password update failed. Please try again.')
+      }
+      throw err
+    }
+  }
+
+  if (hasProfileFields) {
+    const baseProfilePayload = {
+      username: requestPayload.username,
+      email: requestPayload.email,
+    }
+    const profileData = await apiRequest(PROFILE_ENDPOINT, {
+      method: 'PUT',
+      body: baseProfilePayload,
+      signal,
+    })
+    const user = normalizeUser(profileData)
+    if (!user) throw new Error('Invalid profile update response.')
+    return user
+  }
+
+  const data = await apiRequest(PROFILE_ENDPOINT, { method: 'GET', signal })
   const user = normalizeUser(data)
-  if (!user) throw new Error('Invalid profile update response.')
+  if (!user) throw new Error('Invalid profile response.')
   return user
 }
 
