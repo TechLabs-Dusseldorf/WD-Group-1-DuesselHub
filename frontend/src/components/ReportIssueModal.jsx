@@ -87,31 +87,11 @@ export function ReportIssueModal({ open, onClose, onSubmitted }) {
                     value={field.value}
                     onChange={field.onChange}
                     onBlur={field.onBlur}
+                    rows={10}
                     minLength={40}
                     maxLength={250}
                     error={fieldState.isTouched ? fieldState.error?.message : null}
                     ariaDescribedById="error-description"
-                  />
-                )}
-              />
-
-              <Controller
-                name="name"
-                control={form.control}
-                rules={{
-                  required: 'This field is required.',
-                  minLength: { value: 2, message: 'Please enter at least 2 characters.' },
-                }}
-                render={({ field, fieldState }) => (
-                  <FormFieldInput
-                    label="Your name"
-                    placeholder="First + Last Name"
-                    value={field.value}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    minLength={2}
-                    error={fieldState.isTouched ? fieldState.error?.message : null}
-                    ariaDescribedById="error-name"
                   />
                 )}
               />

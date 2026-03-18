@@ -1,6 +1,6 @@
 import { IssueCard } from './IssueCard.jsx'
 
-export function IssueList({ issues, onVote, onOpenComments }) {
+export function IssueList({ issues, onVote, onOpenComments, onDelete }) {
   if (!Array.isArray(issues) || issues.length === 0) return null
   return (
     <div className="issue-list">
@@ -10,6 +10,7 @@ export function IssueList({ issues, onVote, onOpenComments }) {
           issue={issue}
           onVote={onVote}
           onOpenComments={onOpenComments}
+          onDelete={onDelete}
         />
       ))}
     </div>

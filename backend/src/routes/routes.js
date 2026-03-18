@@ -3,6 +3,7 @@ import express from "express"
 import upload from "../middleware/upload.js"
 import authRoutes from "./auth.js"
 import protect, { authorize, optionalProtect } from "../middleware/authMiddleware.js"
+import userRoutes from './userRoutes.js';
 
 import {
   createIssue,
@@ -12,6 +13,7 @@ import {
   softDeleteIssue,
   updateIssue,
   updateIssueStatus,
+  getMyIssues
 } from "../controllers/issueController.js"
 
 import {
@@ -26,6 +28,8 @@ const router = express.Router()
 // Auth routes
 router.use("/auth", authRoutes)
 
+router.use('/users', userRoutes);
+
 // Health check
 router.get("/test", (req, res) => {
   res.status(200).json({ message: "Router is working!" })
@@ -38,6 +42,8 @@ router.get("/issues/:issueId/comments", getCommentsByIssue);
 router.post("/issues", protect, upload.single("photo"), createIssue)
 router.get("/issues", optionalProtect, getAllIssues)
 router.patch("/issues/:id/endorse", protect, endorseIssue)
+router.get('/issues/my-issues', protect, getMyIssues); 
+router.delete('/issues/:id', protect, deleteIssue);
 // Backward compatible endpoint used by current frontend
 router.patch("/:id/endorse", protect, endorseIssue)
 router.patch("/issues/:id/status", protect, authorize("moderator", "admin"), updateIssueStatus)

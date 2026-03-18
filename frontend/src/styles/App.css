@@ -62,6 +62,7 @@ body {
     display: flex;
     align-items: center;
     justify-self: end;
+    gap: 10px;
 }
 
 .btn--topbar-secondary {
@@ -202,6 +203,30 @@ body {
 .btn--topbar:hover {
     background: var(--primary-dark);
     border-color: var(--primary-dark);
+}
+
+.btn--topbar.btn--topbar-profile {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+    color: #111827;
+}
+
+.btn--topbar.btn--topbar-profile:hover {
+    background: #d1d5db;
+    border-color: #6b7280;
+    color: #111827;
+}
+
+.btn--topbar.btn--topbar-logout {
+    background: #1183b0;
+    border-color: #D1D5DB;
+    color: #ffffff;
+}
+
+.btn--topbar.btn--topbar-logout:hover {
+    background: #862007;
+    border-color: #d64114;
+    color: #ffffff;
 }
 
 .btn--topbar.btn--disabled {
@@ -1083,6 +1108,18 @@ body {
     border-color: #c7ced6;
 }
 
+.btn--soft-danger {
+    background: #fde8e8;
+    border-color: #f2b8b8;
+    color: #9f1239;
+}
+
+.btn--soft-danger:hover {
+    background: #fad1d1;
+    border-color: #e89e9e;
+    color: #881337;
+}
+
 .photo-preview {
     border: 1px dashed #cfd6dd;
     border-radius: 12px;
@@ -1247,6 +1284,66 @@ body {
     width: 100%;
     min-height: 46px;
     font-size: 16px;
+}
+
+.profile-page {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.profile-card {
+    width: min(520px, 100%);
+    margin: 24px auto 0;
+}
+
+.profile-actions {
+    margin-top: 8px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+
+.profile-card .auth-form__input:disabled {
+    background: #f3f5f7;
+    color: #5b6570;
+    cursor: not-allowed;
+}
+
+.profile-card .auth-form__input--active {
+    background: #ffffff;
+    color: var(--text);
+    cursor: text;
+}
+
+.my-issues-panel {
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 14px;
+}
+
+.my-issues-panel__header {
+    margin-bottom: 10px;
+}
+
+.my-issues-panel__title {
+    margin: 0;
+    font-size: 22px;
+    line-height: 1.2;
+}
+
+.my-issues-panel__subtitle {
+    margin: 6px 0 0;
+    color: var(--muted);
+}
+
+.my-issues-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
 }
 
 .auth-form__footer {

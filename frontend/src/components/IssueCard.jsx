@@ -14,7 +14,7 @@ function formatDate(isoString) {
   }).format(date)
 }
 
-export function IssueCard({ issue, onVote, onOpenComments }) {
+export function IssueCard({ issue, onVote, onOpenComments, onDelete }) {
   const [isFlyoutOpen, setIsFlyoutOpen] = useState(false)
   const placeholderSrc = '/issue-image-placeholder.svg'
   const photoUrl = typeof issue?.photoUrl === 'string' ? issue.photoUrl.trim() : ''
@@ -42,39 +42,46 @@ export function IssueCard({ issue, onVote, onOpenComments }) {
     e.currentTarget.src = placeholderSrc
   }
 
-  const handleOpenComments = (event) => {
-    event?.stopPropagation?.()
-    if (!onOpenComments) return
-    onOpenComments(issue)
-  }
+const handleOpenComments = (event) => {
+  event?.stopPropagation?.()
+  if (!onOpenComments) return
+  onOpenComments(issue)
+}
 
-  const openDetails = () => setIsFlyoutOpen(true)
-  const closeDetails = () => setIsFlyoutOpen(false)
+const openDetails = () => setIsFlyoutOpen(true)
+const closeDetails = () => setIsFlyoutOpen(false)
 
-  const onCardKeyDown = (event) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return
-    event.preventDefault()
-    handleOpenComments()
-  }
+const onCardKeyDown = (event) => {
+  if (event.key !== 'Enter' && event.key !== ' ') return
+  event.preventDefault()
+  handleOpenComments()
+}
 
-  const normalizedStatus = (() => {
-    const value = status.toLowerCase()
-    if (!value) return null
-    if (value.includes('progress')) return { label: 'In progress', tone: 'progress' }
-    if (value.includes('resolved') || value.includes('fixed')) return { label: 'Fixed', tone: 'fixed' }
-    return { label: 'Open', tone: 'open' }
-  })()
+const handleDelete = (event) => {
+  event?.stopPropagation?.()
+  if (!onDelete) return
+  onDelete(issue)
+}
 
-  return (
-    <>
-      <article
-        className="issue-card issue-card--clickable"
-        role="button"
-        tabIndex={0}
-        onClick={handleOpenComments}
-        onKeyDown={onCardKeyDown}
-        aria-label={`Open comments for issue: ${issue.title}`}
-      >
+const normalizedStatus = (() => {
+  const value = status?.toLowerCase()
+  if (!value) return null
+  if (value.includes('progress')) return { label: 'In progress', tone: 'progress' }
+  if (value.includes('resolved') || value.includes('fixed')) return { label: 'Fixed', tone: 'fixed' }
+  return { label: 'Open', tone: 'open' }
+})()
+
+return (
+  <>
+    <article
+      className={`issue-card issue-card--clickable ${onDelete ? 'issue-card--with-actions' : ''}`}
+      role="button"
+      tabIndex={0}
+      onClick={handleOpenComments}
+      onKeyDown={onCardKeyDown}
+      aria-label={`Open comments for issue: ${issue.title}`}
+    >
+      {/* ... rest of your existing JSX stays unchanged ... */}
       <div className="issue-card__vote">
         <div className="issue-card__voteMain">
           <button
@@ -131,16 +138,27 @@ export function IssueCard({ issue, onVote, onOpenComments }) {
           {issue.description}
         </p>
 
-        <div className="issue-card__actions">
+      <div className="issue-card__actions">
+        <button
+          type="button"
+          className="btn issue-card__commentsBtn issue-card__commentsBtn--stack"
+          onClick={handleOpenComments}
+          aria-label={`Open comments for issue: ${issue.title}`}
+        >
+          {typeof commentCount === 'number' ? `Comments: ${commentCount}` : 'Comments'}
+        </button>
+
+        {onDelete && (
           <button
             type="button"
-            className="btn issue-card__commentsBtn issue-card__commentsBtn--stack"
-            onClick={handleOpenComments}
-            aria-label={`Open comments for issue: ${issue.title}`}
+            className="btn btn--secondary issue-card__deleteBtn"
+            onClick={handleDelete}
+            aria-label={`Delete issue: ${issue.title}`}
           >
-            {typeof commentCount === 'number' ? `Comments: ${commentCount}` : 'Comments'}
+            Delete
           </button>
-        </div>
+        )}
+      </div>   
 
       </div>
 

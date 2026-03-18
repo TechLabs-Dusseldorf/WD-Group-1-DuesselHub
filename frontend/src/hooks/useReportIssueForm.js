@@ -3,8 +3,10 @@ import { useForm } from 'react-hook-form'
 import { createIssue } from '../api/issues.js'
 import { toast } from 'react-toastify'
 import { extractHttpStatus } from '../utils/http.js'
+import { useAuth } from '../context/AuthContext.jsx'
 
 export function useReportIssueForm({ onSubmitted, onClose } = {}) {
+  const { user } = useAuth()
   const [file, setFile] = useState(null)
   const [submitError, setSubmitError] = useState(null)
   const [inlineToast, setInlineToast] = useState(null)
@@ -17,7 +19,7 @@ export function useReportIssueForm({ onSubmitted, onClose } = {}) {
     reset: resetForm,
   } = useForm({
     mode: 'onChange',
-    defaultValues: { title: '', location: '', description: '', name: '' },
+    defaultValues: { title: '', location: '', description: '' },
   })
 
   function pickFile(f) {
@@ -49,7 +51,7 @@ export function useReportIssueForm({ onSubmitted, onClose } = {}) {
       formData.append('title', values.title)
       formData.append('location', values.location)
       formData.append('description', values.description)
-      formData.append('name', values.name)
+      formData.append('name', user?.username ?? 'Anonymous User')
       if (file) formData.append('photo', file)
 
       try {
@@ -94,7 +96,7 @@ export function useReportIssueForm({ onSubmitted, onClose } = {}) {
       }
     },
     (formErrors) => {
-      const labels = { title: 'Title', location: 'Location', description: 'Description', name: 'Name' }
+      const labels = { title: 'Title', location: 'Location', description: 'Description' }
       const names = Object.keys(formErrors).map((k) => labels[k]).filter(Boolean)
       showInlineToast(
         names.length
