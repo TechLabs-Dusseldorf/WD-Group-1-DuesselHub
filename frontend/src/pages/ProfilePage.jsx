@@ -68,6 +68,7 @@ export function ProfilePage() {
   const newPassword = watch('newPassword')
   const passwordReadyForSave = passwordStep === 'set'
   const hasPasswordChanges = passwordReadyForSave && String(newPassword ?? '').length > 0
+  const isPasswordMode = isEditMode && passwordStep === 'set'
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -78,6 +79,7 @@ export function ProfilePage() {
 
   const hasChanges = useMemo(() => {
     if (!profile) return false
+    if (isPasswordMode) return hasPasswordChanges
     const normalizedUsername = String(username ?? '').trim()
     const normalizedEmail = String(email ?? '').trim()
     const baseChanged =
@@ -85,7 +87,7 @@ export function ProfilePage() {
       normalizedEmail !== String(profile.email ?? '')
 
     return baseChanged || hasPasswordChanges
-  }, [profile, username, email, hasPasswordChanges])
+  }, [profile, username, email, hasPasswordChanges, isPasswordMode])
 
   async function loadProfile(signal) {
     setStatus('loading')
@@ -168,12 +170,8 @@ export function ProfilePage() {
     if (!profile) return
     setSubmitError(null)
 
-    const payload = {
-      username: String(values.username ?? '').trim(),
-      email: String(values.email ?? '').trim(),
-    }
-
     if (hasPasswordChanges) {
+      const payload = {}
       const currentPassword = String(values.currentPassword ?? '')
       if (!currentPassword.length) {
         setSubmitError('Please enter your current password.')
@@ -183,6 +181,33 @@ export function ProfilePage() {
       payload.currentPassword = currentPassword
       payload.newPassword = values.newPassword
       payload.password = values.newPassword
+
+      try {
+        const updated = await updateCurrentUserProfile(payload)
+        const nextProfile = {
+          id: updated.id ?? profile.id ?? null,
+          username: updated.username ?? profile.username ?? '',
+          email: updated.email ?? profile.email ?? '',
+          role: updated.role ?? profile.role ?? null,
+        }
+
+        setProfile(nextProfile)
+        updateUser(nextProfile)
+        reset(toFormValues(nextProfile))
+        setIsEditMode(false)
+        setPasswordStep('hidden')
+        toast.success('Password and profile updated successfully.')
+      } catch (err) {
+        const message = toProfileSubmitMessage(err, { includesPassword: true })
+        setSubmitError(message)
+        toast.error(message)
+      }
+      return
+    }
+
+    const payload = {
+      username: String(values.username ?? '').trim(),
+      email: String(values.email ?? '').trim(),
     }
 
     try {
@@ -199,19 +224,11 @@ export function ProfilePage() {
       reset(toFormValues(nextProfile))
       setIsEditMode(false)
       setPasswordStep('hidden')
-      if (hasPasswordChanges) {
-        toast.success('Password and profile updated successfully.')
-      } else {
-        toast.success('Profile updated successfully.')
-      }
+      toast.success('Profile updated successfully.')
     } catch (err) {
-      const message = toProfileSubmitMessage(err, { includesPassword: hasPasswordChanges })
+      const message = toProfileSubmitMessage(err, { includesPassword: false })
       setSubmitError(message)
-      if (hasPasswordChanges) {
-        toast.error(message)
-      } else {
-        toast.error(message)
-      }
+      toast.error(message)
     }
   })
 
@@ -238,53 +255,57 @@ export function ProfilePage() {
 
           {status === 'ready' && (
             <form className="auth-form" onSubmit={onSubmit} noValidate autoComplete="off">
-              <div className="auth-form__field">
-                <label className="auth-form__label" htmlFor="username">
-                  Username
-                </label>
-                <input
-                  id="username"
-                  type="text"
-                  disabled={!isEditMode}
-                  className={`auth-form__input${isEditMode ? ' auth-form__input--active' : ''}${errors.username ? ' is-invalid' : ''}`}
-                  {...register('username', {
-                    required: 'Username is required.',
-                    minLength: {
-                      value: 3,
-                      message: 'Username must be at least 3 characters long.',
-                    },
-                  })}
-                />
-                {errors.username && (
-                  <p className="auth-form__field-error" role="alert">
-                    {errors.username.message}
-                  </p>
-                )}
-              </div>
+              {!isPasswordMode && (
+                <>
+                  <div className="auth-form__field">
+                    <label className="auth-form__label" htmlFor="username">
+                      Username
+                    </label>
+                    <input
+                      id="username"
+                      type="text"
+                      disabled={!isEditMode}
+                      className={`auth-form__input${isEditMode ? ' auth-form__input--active' : ''}${errors.username ? ' is-invalid' : ''}`}
+                      {...register('username', {
+                        required: 'Username is required.',
+                        minLength: {
+                          value: 3,
+                          message: 'Username must be at least 3 characters long.',
+                        },
+                      })}
+                    />
+                    {errors.username && (
+                      <p className="auth-form__field-error" role="alert">
+                        {errors.username.message}
+                      </p>
+                    )}
+                  </div>
 
-              <div className="auth-form__field">
-                <label className="auth-form__label" htmlFor="email">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  disabled={!isEditMode}
-                  className={`auth-form__input${isEditMode ? ' auth-form__input--active' : ''}${errors.email ? ' is-invalid' : ''}`}
-                  {...register('email', {
-                    required: 'E-mail is required.',
-                    pattern: {
-                      value: EMAIL_RULE,
-                      message: 'Please enter a valid e-mail address.',
-                    },
-                  })}
-                />
-                {errors.email && (
-                  <p className="auth-form__field-error" role="alert">
-                    {errors.email.message}
-                  </p>
-                )}
-              </div>
+                  <div className="auth-form__field">
+                    <label className="auth-form__label" htmlFor="email">
+                      Email
+                    </label>
+                    <input
+                      id="email"
+                      type="email"
+                      disabled={!isEditMode}
+                      className={`auth-form__input${isEditMode ? ' auth-form__input--active' : ''}${errors.email ? ' is-invalid' : ''}`}
+                      {...register('email', {
+                        required: 'E-mail is required.',
+                        pattern: {
+                          value: EMAIL_RULE,
+                          message: 'Please enter a valid e-mail address.',
+                        },
+                      })}
+                    />
+                    {errors.email && (
+                      <p className="auth-form__field-error" role="alert">
+                        {errors.email.message}
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
 
               {isEditMode && passwordStep === 'set' && (
                 <>
