@@ -20,8 +20,10 @@ export function FeedPage() {
     const storedSortKey = localStorage.getItem(SORT_STORAGE_KEY)
     return ALLOWED_SORT_KEYS.has(storedSortKey) ? storedSortKey : DEFAULT_SORT_KEY
   })
+  const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch] = useState('')
   const { issues, loading, error, sortError, voteError, clearVoteError, reload, handleVote } =
-    useIssues(sortKey)
+    useIssues(sortKey, search)
   const [isReportOpen, setIsReportOpen] = useState(false)
   const [activeIssueForComments, setActiveIssueForComments] = useState(null)
   const { isLoggedIn } = useAuth()
@@ -29,6 +31,13 @@ export function FeedPage() {
   useEffect(() => {
     localStorage.setItem(SORT_STORAGE_KEY, sortKey)
   }, [sortKey])
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setSearch(String(searchInput ?? '').trim())
+    }, 250)
+    return () => window.clearTimeout(timeoutId)
+  }, [searchInput])
 
   useEffect(() => {
     if (!voteError) return
@@ -81,6 +90,13 @@ export function FeedPage() {
           <div className="feed-panel__filters">
             <section className="controls" aria-label="Feed controls">
               <SortChips value={sortKey} onChange={setSortKey} />
+              <input
+                type="search"
+                className="auth-form__input auth-form__input--active"
+                placeholder="Search issues..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+              />
               {sortError && (
                 <p className="sort-error" role="status">
                   {sortError}

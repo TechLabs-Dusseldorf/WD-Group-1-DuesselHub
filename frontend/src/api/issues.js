@@ -1,9 +1,10 @@
 import { apiRequest, httpGet, httpPatch, httpPost } from './client.js'
 
-export async function getIssues({ sortKey, signal } = {}) {
+export async function getIssues({ sortKey, search, signal } = {}) {
   const apiSortValue = sortKey === 'most-endorsed' ? 'most_endorsed' : sortKey
   const params = new URLSearchParams()
   if (apiSortValue) params.set('sort', apiSortValue)
+  if (search) params.set('search', search)
   const query = params.toString()
   const path = query ? `/api/issues?${query}` : '/api/issues'
   const data = await httpGet(path, { signal })
@@ -16,7 +17,7 @@ export async function getMyIssues({ sortKey, search, signal } = {}) {
   if (apiSortValue) params.set('sort', apiSortValue)
   if (search) params.set('search', search)
   const query = params.toString()
-  const path = query ? `/api/issues/mine?${query}` : '/api/issues/mine'
+  const path = query ? `/api/issues/my-issues?${query}` : '/api/issues/my-issues'
   const data = await httpGet(path, { signal })
   return Array.isArray(data) ? data : []
 }
