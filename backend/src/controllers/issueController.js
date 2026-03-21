@@ -1,7 +1,16 @@
 import mongoose from "mongoose";
 import Issue from "../models/Issue.js";
+import Comment from "../models/comment.js";
 import { validateIssue } from "../middleware/validateIssues.js";
 import { uploadToCloudinary } from "../utils/cloudinaryUpload.js";
+
+async function getCommentCountMap(issueIds) {
+  const counts = await Comment.aggregate([
+    { $match: { issueId: { $in: issueIds } } },
+    { $group: { _id: "$issueId", count: { $sum: 1 } } }
+  ]);
+  return new Map(counts.map((c) => [c._id.toString(), c.count]));
+}
 
 function sanitizeEndorsedByList(value) {
   if (!Array.isArray(value)) return [];
@@ -110,6 +119,8 @@ export const getAllIssues = async (req, res) => {
       .sort(sortLogic)
       .populate("user", "username email");
 
+    const commentCountMap = await getCommentCountMap(issues.map((i) => i._id));
+
     const issuesWithVoteState = issues.map((issueDoc) => {
       const issue = issueDoc.toObject();
       const endorsedBy = sanitizeEndorsedByList(issue.endorsedBy);
@@ -121,7 +132,8 @@ export const getAllIssues = async (req, res) => {
       return {
         ...issue,
         endorsements: Math.max(persistedCount, endorsedBy.length),
-        myVote: hasEndorsed ? 1 : 0
+        myVote: hasEndorsed ? 1 : 0,
+        commentCount: commentCountMap.get(issue._id.toString()) ?? 0
       };
     });
 
@@ -302,6 +314,8 @@ export const getMyIssues = async (req, res) => {
       .sort(sortLogic)
       .populate("user", "username email");
 
+    const commentCountMap = await getCommentCountMap(issues.map((i) => i._id));
+
     const issuesWithVoteState = issues.map((issueDoc) => {
       const issue = issueDoc.toObject();
       const endorsedBy = sanitizeEndorsedByList(issue.endorsedBy);
@@ -311,7 +325,8 @@ export const getMyIssues = async (req, res) => {
       return {
         ...issue,
         endorsements: Math.max(persistedCount, endorsedBy.length),
-        myVote: hasEndorsed ? 1 : 0
+        myVote: hasEndorsed ? 1 : 0,
+        commentCount: commentCountMap.get(issue._id.toString()) ?? 0
       };
     });
 

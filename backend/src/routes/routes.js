@@ -35,7 +35,7 @@ router.get("/test", (req, res) => {
   res.status(200).json({ message: "Router is working!" })
 })
 
-router.post("/issues/:issueId/comments", createComment);
+router.post("/issues/:issueId/comments", protect, createComment);
 router.get("/issues/:issueId/comments", getCommentsByIssue);
 
 // Issue routes
