@@ -1,11 +1,6 @@
 import { z } from "zod";
 
 const commentSchema = z.object({
-  user: z
-    .string()
-    .trim()
-    .min(1, "A valid user is required.")
-    .max(100, "User value is too long."),
   text: z
     .string()
     .trim()

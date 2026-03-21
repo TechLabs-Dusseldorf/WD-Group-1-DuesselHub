@@ -22,12 +22,26 @@ export const createComment = async (req, res) => {
       return res.status(404).json({ message: "This Issue Does Not Exist." });
     }
 
+    const cooldownCutoff = new Date(Date.now() - 30 * 1000);
+    const recentComment = await Comment.findOne({
+      issueId,
+      user: req.user._id,
+      createdAt: { $gte: cooldownCutoff }
+    });
+    if (recentComment) {
+      return res.status(429).json({
+        message: "You're posting too fast. Please wait 30 seconds before commenting on this issue again."
+      });
+    }
+
     const comment = new Comment({
       issueId,
+      user: req.user._id,
       ...result.data
     });
 
     const savedComment = await comment.save();
+    await savedComment.populate("user", "username");
 
     return res.status(201).json(savedComment);
 
@@ -53,7 +67,8 @@ export const getCommentsByIssue = async (req, res) => {
 
     
     const comments = await Comment.find({ issueId })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .populate("user", "username");
 
     return res.status(200).json(comments);
 
