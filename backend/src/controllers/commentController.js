@@ -1,4 +1,4 @@
-import Comment from "../models/Comment.js";
+import Comment from "../models/comment.js";
 import Issue from "../models/Issue.js";
 import mongoose from "mongoose";
 import { validateComment } from "../middleware/validateComments.js";
