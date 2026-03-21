@@ -72,21 +72,28 @@ export const createIssue = async (req, res) => {
   }
 };
 
+const VALID_STATUSES = ['open', 'in_progress', 'closed'];
+
 export const getAllIssues = async (req, res) => {
   try {
     const { sort, status, search } = req.query;
 
-    let queryFilter = {};
+    if (status && !VALID_STATUSES.includes(status)) {
+      return res.status(400).json({ message: "Invalid status value." });
+    }
+
+    let queryFilter = { deleted: { $ne: true } };
 
     if (status) {
-      queryFilter.status = status; 
+      queryFilter.status = status;
     }
 
     if (search) {
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       queryFilter.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { location: { $regex: search, $options: 'i' } }
+        { title: { $regex: escapedSearch, $options: 'i' } },
+        { description: { $regex: escapedSearch, $options: 'i' } },
+        { location: { $regex: escapedSearch, $options: 'i' } }
       ];
     }
 
@@ -99,7 +106,7 @@ export const getAllIssues = async (req, res) => {
 
     const currentUserId = req.user?._id?.toString() ?? null;
 
-    const issues = await Issue.find({ deleted: { $ne: true } })
+    const issues = await Issue.find(queryFilter)
       .sort(sortLogic)
       .populate("user", "username email");
 
@@ -261,9 +268,54 @@ export const softDeleteIssue = async (req, res) => {
 // Get "My Issues" list
 export const getMyIssues = async (req, res) => {
   try {
-    // Find issues where the 'user' field matches the currently logged-in user
-    const issues = await Issue.find({ user: req.user._id, deleted: { $ne: true } }).sort({ createdAt: -1 });
-    res.status(200).json(issues);
+    const { sort, status, search } = req.query;
+
+    if (status && !VALID_STATUSES.includes(status)) {
+      return res.status(400).json({ message: "Invalid status value." });
+    }
+
+    let queryFilter = { user: req.user._id, deleted: { $ne: true } };
+
+    if (status) {
+      queryFilter.status = status;
+    }
+
+    if (search) {
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      queryFilter.$or = [
+        { title: { $regex: escapedSearch, $options: 'i' } },
+        { description: { $regex: escapedSearch, $options: 'i' } },
+        { location: { $regex: escapedSearch, $options: 'i' } }
+      ];
+    }
+
+    let sortLogic = { createdAt: -1 };
+    if (sort === "most_endorsed") {
+      sortLogic = { endorsements: -1 };
+    } else if (sort === "hottest") {
+      sortLogic = { endorsements: -1, createdAt: -1 };
+    }
+
+    const currentUserId = req.user._id.toString();
+
+    const issues = await Issue.find(queryFilter)
+      .sort(sortLogic)
+      .populate("user", "username email");
+
+    const issuesWithVoteState = issues.map((issueDoc) => {
+      const issue = issueDoc.toObject();
+      const endorsedBy = sanitizeEndorsedByList(issue.endorsedBy);
+      const persistedCount = typeof issue.endorsements === "number" ? issue.endorsements : 0;
+      const hasEndorsed = endorsedBy.some((userId) => userId.toString() === currentUserId);
+
+      return {
+        ...issue,
+        endorsements: Math.max(persistedCount, endorsedBy.length),
+        myVote: hasEndorsed ? 1 : 0
+      };
+    });
+
+    res.status(200).json(issuesWithVoteState);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
