@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { endorseIssue, getIssues } from '../api/issues.js'
 import { getMockIssues } from '../api/mock.js'
@@ -28,10 +28,13 @@ export function useIssues(sortKey, search) {
 
   const queryKey = ['issues', sortKey, search ?? '', user?.id ?? null, token ?? null]
 
+  useEffect(() => {
+    setSortError(null)
+  }, [sortKey, search])
+
   const { data: issues = [], isLoading: loading, isError, refetch } = useQuery({
     queryKey,
     queryFn: async ({ signal }) => {
-      setSortError(null)
       try {
         const data = await getIssues({ sortKey, search, signal })
         const enriched = enrichIssues(data, voteMapRef.current)
@@ -44,7 +47,7 @@ export function useIssues(sortKey, search) {
         return enrichIssues(mockData, voteMapRef.current)
       }
     },
-    staleTime: 1000 * 30,
+    staleTime: 0,
   })
 
   const { mutate: vote } = useMutation({

@@ -12,6 +12,17 @@ async function getCommentCountMap(issueIds) {
   return new Map(counts.map((c) => [c._id.toString(), c.count]));
 }
 
+function applyHottestSort(issues) {
+  const now = Date.now();
+  return [...issues].sort((a, b) => {
+    const ageA = (now - new Date(a.createdAt).getTime()) / (1000 * 60 * 60);
+    const ageB = (now - new Date(b.createdAt).getTime()) / (1000 * 60 * 60);
+    const scoreA = a.endorsements / Math.pow(ageA + 2, 1.5);
+    const scoreB = b.endorsements / Math.pow(ageB + 2, 1.5);
+    return scoreB - scoreA;
+  });
+}
+
 function sanitizeEndorsedByList(value) {
   if (!Array.isArray(value)) return [];
   const unique = new Map();
@@ -108,8 +119,6 @@ export const getAllIssues = async (req, res) => {
 
     let sortLogic = { createdAt: -1 };
     if (sort === "most_endorsed") {
-      sortLogic = { endorsements: -1 };
-    } else if (sort === "hottest") {
       sortLogic = { endorsements: -1, createdAt: -1 };
     }
 
@@ -137,7 +146,8 @@ export const getAllIssues = async (req, res) => {
       };
     });
 
-    res.status(200).json(issuesWithVoteState);
+    const result = sort === "hottest" ? applyHottestSort(issuesWithVoteState) : issuesWithVoteState;
+    res.status(200).json(result);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -303,8 +313,6 @@ export const getMyIssues = async (req, res) => {
 
     let sortLogic = { createdAt: -1 };
     if (sort === "most_endorsed") {
-      sortLogic = { endorsements: -1 };
-    } else if (sort === "hottest") {
       sortLogic = { endorsements: -1, createdAt: -1 };
     }
 
@@ -330,7 +338,8 @@ export const getMyIssues = async (req, res) => {
       };
     });
 
-    res.status(200).json(issuesWithVoteState);
+    const result = sort === "hottest" ? applyHottestSort(issuesWithVoteState) : issuesWithVoteState;
+    res.status(200).json(result);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
