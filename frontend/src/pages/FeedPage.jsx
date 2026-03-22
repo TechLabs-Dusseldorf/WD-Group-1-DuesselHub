@@ -77,33 +77,55 @@ export function FeedPage() {
       <TopBar onReportIssue={handleReportIssue} />
 
       <main className="container page">
-        <section className="feed-panel" aria-label="Feed header and filters">
-          <div className="feed-panel__inner">
-            <header className="page-header">
-              <div className="page-header__text">
-                <h1 className="page-title">Active issues</h1>
-                <p className="page-subtitle">All reports from the community</p>
-              </div>
-            </header>
+        <section className="hero" aria-label="Welcome">
+          <div className="hero__badge">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            Düsseldorf Civic Engagement
           </div>
 
-          <div className="feed-panel__filters">
-            <section className="controls" aria-label="Feed controls">
-              <SortChips value={sortKey} onChange={setSortKey} />
+          <h1 className="hero__headline">
+            Building a <span className="hero__headline-accent">Better City,</span> Together.
+          </h1>
+
+          <p className="hero__subtitle">
+            Your direct line to City Hall. Report maintenance needs, propose local improvements, and endorse the issues that matter most to your neighborhood.
+          </p>
+
+          <div className="hero__actions">
+            <button type="button" className="hero__primary-btn" onClick={handleReportIssue}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              File a New Report
+            </button>
+            <button type="button" className="hero__secondary-btn" disabled aria-disabled="true">
+              View Interactive Map
+            </button>
+          </div>
+        </section>
+
+        <section className="feed-panel" aria-label="Feed header and filters">
+          <div className="feed-panel__header">
+            <div className="feed-panel__header-left">
+              <h2 className="feed-panel__title">Active Issues Feed</h2>
+              {!loading && !error && (
+                <span className="feed-panel__count">{issues.length} local reports</span>
+              )}
+            </div>
+            <div className="feed-panel__header-right">
               <input
                 type="search"
-                className="auth-form__input auth-form__input--active"
-                placeholder="Search issues..."
+                className="feed-panel__search-input"
+                placeholder="Search..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
               />
-              {sortError && (
-                <p className="sort-error" role="status">
-                  {sortError}
-                </p>
-              )}
-            </section>
+              <SortChips value={sortKey} onChange={setSortKey} />
+            </div>
           </div>
+          {sortError && (
+            <p className="sort-error" role="status">
+              {sortError}
+            </p>
+          )}
         </section>
 
         <section className="feed" aria-label="Issue feed">

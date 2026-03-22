@@ -3,7 +3,6 @@ import { toast } from 'react-toastify'
 import { useAuth } from '../context/AuthContext.jsx'
 
 export function TopBar({ onReportIssue }) {
-    const logoUrl = '/duesselhub-logo.svg'
     const { isLoggedIn, logout } = useAuth()
     const navigate = useNavigate()
     const location = useLocation()
@@ -25,33 +24,47 @@ export function TopBar({ onReportIssue }) {
         onReportIssue?.()
     }
 
+    const isExplorePage = location.pathname === '/'
+
     return (
         <header className="topbar">
             <div className="container topbar__inner">
                 <div className="topbar__left">
-                    <a className="brand" href="/" aria-label="Go to home page">
-                        <img
-                            className="brand__logoImg"
-                            src={logoUrl}
-                            alt="DüsselHub"
-                            width={140}
-                            height={36}
-                        />
+                    <a className="topbar__wordmark" href="/" aria-label="Go to home page">
+                        DüsselHub
                     </a>
 
+                    {!isAuthPage && (
+                        <nav className="topbar__nav" aria-label="Main navigation">
+                            <a
+                                className={`topbar__nav-link${isExplorePage ? ' topbar__nav-link--active' : ''}`}
+                                href="/"
+                            >
+                                Explore
+                            </a>
+
+                            <span className="topbar__nav-link topbar__nav-link--disabled" aria-disabled="true">
+                                Map
+                                <span className="topbar__soon-badge">Soon</span>
+                            </span>
+                        </nav>
+                    )}
+                </div>
+
+                <div className="topbar__actions">
                     {!isAuthPage && (
                         isLoggedIn ? (
                             <>
                                 <button
                                     type="button"
-                                    className="btn btn--topbar btn--topbar-profile"
+                                    className="topbar__text-btn"
                                     onClick={() => navigate('/profile')}
                                 >
                                     Profile
                                 </button>
                                 <button
                                     type="button"
-                                    className="btn btn--topbar btn--topbar-logout"
+                                    className="topbar__text-btn"
                                     onClick={handleLogout}
                                 >
                                     Logout
@@ -60,26 +73,24 @@ export function TopBar({ onReportIssue }) {
                         ) : (
                             <button
                                 type="button"
-                                className="btn btn--topbar btn--topbar-secondary"
+                                className="topbar__text-btn"
                                 onClick={() => navigate('/login')}
                             >
                                 Login
                             </button>
                         )
                     )}
-                </div>
 
-                <div className="topbar__actions">
                     <button
                         type="button"
-                        className={`btn btn--topbar${!isLoggedIn ? ' btn--disabled' : ''}`}
-                        disabled={!isLoggedIn}
-                        onClick={isLoggedIn ? handleReportClick : undefined}
+                        className="topbar__report-btn"
+                        onClick={handleReportClick}
                     >
                         Report Issue
                     </button>
                 </div>
             </div>
+            <div className="topbar__divider" aria-hidden="true" />
         </header>
     )
 }

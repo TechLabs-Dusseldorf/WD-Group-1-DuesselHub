@@ -173,7 +173,7 @@ function ComposerSection({
             }}
           />
           <div className="comments-form__actions comments-form__actions--inside">
-            <button type="submit" className="btn btn--primary" disabled={!isValid || isSubmitting}>
+            <button type="submit" className="btn btn--primary comments-form__submit-btn" disabled={!isValid || isSubmitting}>
               {isSubmitting ? 'Posting…' : 'Post comment'}
             </button>
           </div>
