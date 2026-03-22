@@ -188,14 +188,16 @@ export function IssueCard({ issue, onVote, onOpenComments, onDelete }) {
             </div>
 
             <div className="issue-card__footer-actions">
-              <button
-                type="button"
-                className={`issue-card__endorse-btn ${issue.myVote === 1 ? 'issue-card__endorse-btn--active' : ''}`}
-                onClick={handleUpvote}
-                aria-label={`Endorse issue: ${issue.title}`}
-              >
-                Endorse Issue
-              </button>
+              {onVote && (
+                <button
+                  type="button"
+                  className={`issue-card__endorse-btn ${issue.myVote === 1 ? 'issue-card__endorse-btn--active' : ''}`}
+                  onClick={handleUpvote}
+                  aria-label={`Endorse issue: ${issue.title}`}
+                >
+                  Endorse Issue
+                </button>
+              )}
               {onDelete && (
                 <button
                   type="button"

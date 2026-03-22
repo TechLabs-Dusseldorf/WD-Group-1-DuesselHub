@@ -6,6 +6,7 @@ import { LoadingState } from '../components/LoadingState.jsx'
 import { SortChips } from '../components/SortChips.jsx'
 import { IssueList } from '../components/IssueList.jsx'
 import { ReportIssueModal } from '../components/ReportIssueModal.jsx'
+import { CommentsModal } from '../components/CommentsModal.jsx'
 import {
   getCurrentUserProfile,
   updateCurrentUserProfile,
@@ -38,6 +39,7 @@ export function ProfilePage() {
   const [myIssuesSortKey, setMyIssuesSortKey] = useState('newest')
   const [myIssuesSearchInput, setMyIssuesSearchInput] = useState('')
   const [myIssuesSearch, setMyIssuesSearch] = useState('')
+  const [activeIssueForComments, setActiveIssueForComments] = useState(null)
 
   const {
     issues: myIssues,
@@ -481,7 +483,11 @@ export function ProfilePage() {
           )}
 
           {!myIssuesLoading && !myIssuesError && myIssues.length > 0 && (
-            <IssueList issues={myIssues} onDelete={handleDeleteIssue} />
+            <IssueList
+              issues={myIssues}
+              onDelete={handleDeleteIssue}
+              onOpenComments={(issue) => setActiveIssueForComments(issue)}
+            />
           )}
         </section>
       </main>
@@ -489,6 +495,11 @@ export function ProfilePage() {
         open={isReportOpen}
         onClose={() => setIsReportOpen(false)}
         onSubmitted={reloadMyIssues}
+      />
+      <CommentsModal
+        isOpen={Boolean(activeIssueForComments)}
+        issue={activeIssueForComments}
+        onClose={() => setActiveIssueForComments(null)}
       />
     </div>
   )

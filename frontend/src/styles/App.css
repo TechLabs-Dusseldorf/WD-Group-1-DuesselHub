@@ -1373,8 +1373,9 @@ body {
 }
 
 .form__label {
-    font-weight: 700;
-    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
 }
 
 .form__input,
@@ -1391,13 +1392,13 @@ body {
 
 .form__input:focus,
 .form__textarea:focus {
-    border-color: #1f5f76;
-    outline: 3px solid rgba(48, 123, 151, 0.35);
+    border-color: #1477ff;
+    outline: 3px solid rgba(20, 119, 255, 0.15);
     outline-offset: 0;
 }
 
 .form__field:focus-within .form__label {
-    color: #e3f6ff;
+    color: #00307e;
 }
 
 .form__textarea {
